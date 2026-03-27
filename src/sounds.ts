@@ -312,67 +312,48 @@ export function attachDMSounds(): void {
 }
 
 
-// Observe incoming messages in DMs/GCs
-// We observe dm-container (high in the tree) so the observer survives
-// React re-renders that destroy/recreate dm-message-list.
-let dmObserver: MutationObserver | null = null;
-let observedDmContainer: Element | null = null;
+// Poll for new DM messages by tracking seen message UUIDs.
+// MutationObserver doesn't reliably survive Twitter's React re-renders,
+// so we poll on a 2s interval instead.
 const seenMessageIds = new Set<string>();
+let dmPollTimer: ReturnType<typeof setInterval> | null = null;
 
 export function observeIncomingMessages(): void {
-  const container = document.querySelector(DM_CONTAINER);
+  const inDMs = window.location.pathname.includes("/messages");
 
-  if (!container) {
-    if (dmObserver) {
-      dmObserver.disconnect();
-      dmObserver = null;
-      observedDmContainer = null;
+  if (!inDMs) {
+    if (dmPollTimer) {
+      clearInterval(dmPollTimer);
+      dmPollTimer = null;
       seenMessageIds.clear();
     }
     return;
   }
 
-  // Already observing this container
-  if (observedDmContainer === container && observedDmContainer.isConnected) return;
-
-  if (dmObserver) {
-    dmObserver.disconnect();
-  }
-  observedDmContainer = container;
-  seenMessageIds.clear();
+  // Already polling
+  if (dmPollTimer) return;
 
   // Seed with all currently visible message IDs
-  for (const msg of Array.from(container.querySelectorAll(DM_MESSAGE))) {
+  for (const msg of Array.from(document.querySelectorAll(DM_MESSAGE))) {
     const id = msg.getAttribute("data-testid");
     if (id) seenMessageIds.add(id);
   }
 
-  let dmMutationTimer: ReturnType<typeof setTimeout> | null = null;
+  dmPollTimer = setInterval(() => {
+    if (!settings.soundEnabled || settings.mode === "off") return;
+    if (!document.hasFocus()) return;
 
-  dmObserver = new MutationObserver(() => {
-    if (dmMutationTimer) return;
-    dmMutationTimer = setTimeout(() => {
-      dmMutationTimer = null;
-      if (!settings.soundEnabled || settings.mode === "off") return;
-      if (!document.hasFocus()) return;
-
-      let hasNew = false;
-      for (const msg of Array.from(container.querySelectorAll(DM_MESSAGE))) {
-        const id = msg.getAttribute("data-testid");
-        if (id && !seenMessageIds.has(id)) {
-          seenMessageIds.add(id);
-          hasNew = true;
-        }
+    let hasNew = false;
+    for (const msg of Array.from(document.querySelectorAll(DM_MESSAGE))) {
+      const id = msg.getAttribute("data-testid");
+      if (id && !seenMessageIds.has(id)) {
+        seenMessageIds.add(id);
+        hasNew = true;
       }
+    }
 
-      if (hasNew) {
-        playMessageBlip();
-      }
-    }, 200);
-  });
-
-  dmObserver.observe(container, {
-    childList: true,
-    subtree: true,
-  });
+    if (hasNew) {
+      playMessageBlip();
+    }
+  }, 2000);
 }
