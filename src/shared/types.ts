@@ -3,6 +3,7 @@ export type FilterMode = "off" | "milady" | "debug";
 export interface ExtensionSettings {
   mode: FilterMode;
   whitelistHandles: string[];
+  soundEnabled: boolean;
 }
 
 export interface DetectionStats {

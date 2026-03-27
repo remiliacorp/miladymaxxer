@@ -15,10 +15,12 @@ export async function loadSettings(): Promise<ExtensionSettings> {
   const stored = await chrome.storage.sync.get({
     mode: DEFAULT_SETTINGS.mode,
     whitelistHandles: DEFAULT_SETTINGS.whitelistHandles,
+    soundEnabled: DEFAULT_SETTINGS.soundEnabled,
   });
   return {
     mode: isMode(stored.mode) ? stored.mode : DEFAULT_SETTINGS.mode,
     whitelistHandles: normalizeWhitelistHandles(stored.whitelistHandles),
+    soundEnabled: typeof stored.soundEnabled === "boolean" ? stored.soundEnabled : DEFAULT_SETTINGS.soundEnabled,
   };
 }
 
@@ -26,6 +28,7 @@ export async function saveSettings(settings: ExtensionSettings): Promise<void> {
   await chrome.storage.sync.set({
     mode: settings.mode,
     whitelistHandles: normalizeWhitelistHandles(settings.whitelistHandles),
+    soundEnabled: settings.soundEnabled,
   });
 }
 

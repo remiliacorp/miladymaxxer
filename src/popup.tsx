@@ -326,6 +326,55 @@ const styles = `
     line-height: 1.45;
   }
 
+  .sound-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+  }
+
+  .sound-toggle-label {
+    color: var(--text-soft);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .sound-toggle-switch {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    background: var(--bg-2);
+    border: 1px solid var(--line-strong);
+    border-radius: 11px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .sound-toggle-switch[data-enabled="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .sound-toggle-switch::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: var(--text);
+    border-radius: 50%;
+    transition: all 0.2s ease;
+  }
+
+  .sound-toggle-switch[data-enabled="true"]::after {
+    left: 20px;
+    background: #fff;
+  }
+
   .stats-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -584,6 +633,12 @@ function App() {
             whitelistHandles: normalizeWhitelistHandles(changes.whitelistHandles.newValue),
           }));
         }
+        if (changes.soundEnabled) {
+          setSettings((current) => ({
+            ...current,
+            soundEnabled: typeof changes.soundEnabled.newValue === "boolean" ? changes.soundEnabled.newValue : current.soundEnabled,
+          }));
+        }
       }
 
       if (area === "local") {
@@ -605,6 +660,12 @@ function App() {
 
   const setMode = async (mode: FilterMode) => {
     const next = { ...settings(), mode };
+    setSettings(next);
+    await saveSettings(next);
+  };
+
+  const toggleSound = async () => {
+    const next = { ...settings(), soundEnabled: !settings().soundEnabled };
     setSettings(next);
     await saveSettings(next);
   };
@@ -683,6 +744,16 @@ function App() {
                   </button>
                 )}
               </For>
+            </div>
+            <div class="sound-toggle">
+              <span class="sound-toggle-label">Sound</span>
+              <button
+                type="button"
+                class="sound-toggle-switch"
+                data-enabled={String(settings().soundEnabled)}
+                onClick={() => void toggleSound()}
+                aria-label={settings().soundEnabled ? "Disable sound" : "Enable sound"}
+              />
             </div>
           </section>
         </Show>
