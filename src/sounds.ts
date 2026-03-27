@@ -319,7 +319,8 @@ const seenMessageIds = new Set<string>();
 let dmPollTimer: ReturnType<typeof setInterval> | null = null;
 
 export function observeIncomingMessages(): void {
-  const inDMs = window.location.pathname.includes("/messages");
+  const inDMs = window.location.pathname.includes("/messages") ||
+                window.location.pathname.includes("/i/chat");
 
   if (!inDMs) {
     if (dmPollTimer) {
