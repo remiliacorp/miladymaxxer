@@ -5,7 +5,6 @@ import {
   TWEET_COMPOSER,
   DM_CONTAINER,
   DM_CONVERSATION_PANEL,
-  DM_MESSAGE_LIST,
   DM_MESSAGE,
   DM_COMPOSER_FORM,
   LAYERS,
@@ -295,20 +294,6 @@ export function attachDMSounds(): void {
     }
   }, { passive: true, capture: true });
 
-  // Document-level mouseover for DM conversation hover sounds
-  document.addEventListener("mouseover", (e) => {
-    if (settings.mode === "off") return;
-
-    const target = e.target as HTMLElement;
-    // Hover on conversation panel or any DM message
-    const dmElement = target.closest(DM_CONVERSATION_PANEL) ||
-                      target.closest(DM_MESSAGE);
-
-    if (dmElement && !soundsAttached.has(dmElement as HTMLElement) && getAudioContext(true)) {
-      soundsAttached.add(dmElement as HTMLElement);
-      playTone(600, 0.04, "sine", 0.03, 0, 0.01);
-    }
-  }, { passive: true });
 }
 
 
