@@ -52,6 +52,229 @@ let stats: DetectionStats | null = null;
 let matchedAccounts: MatchedAccountMap | null = null;
 let collectedAvatars: CollectedAvatarMap | null = null;
 let localStateWriteScheduled = false;
+let audioContext: AudioContext | null = null;
+const soundsAttached = new WeakSet<HTMLElement>();
+
+// Polyphonic sound system using Web Audio API
+function getAudioContext(): AudioContext {
+  if (!audioContext) {
+    audioContext = new AudioContext();
+  }
+  return audioContext;
+}
+
+function playTone(
+  frequency: number,
+  duration: number,
+  type: OscillatorType = "sine",
+  volume: number = 0.08,
+  attack: number = 0.01,
+  decay: number = 0.1,
+): void {
+  try {
+    const ctx = getAudioContext();
+    if (ctx.state === "suspended") {
+      void ctx.resume();
+    }
+
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
+
+    // ADSR envelope for pleasant sound
+    gainNode.gain.setValueAtTime(0, ctx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(volume, ctx.currentTime + attack);
+    gainNode.gain.linearRampToValueAtTime(volume * 0.7, ctx.currentTime + attack + decay);
+    gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + duration);
+  } catch {
+    // Audio not available, fail silently
+  }
+}
+
+function playChord(frequencies: number[], duration: number, volume: number = 0.05): void {
+  for (const freq of frequencies) {
+    playTone(freq, duration, "sine", volume);
+  }
+}
+
+// Sound presets
+function playHoverSound(isMilady: boolean): void {
+  if (isMilady) {
+    // Sparkly high chime for milady
+    playTone(1200, 0.12, "sine", 0.06);
+    setTimeout(() => playTone(1500, 0.1, "sine", 0.04), 30);
+  } else {
+    // Subtle soft tone for non-milady
+    playTone(400, 0.08, "sine", 0.03);
+  }
+}
+
+function playClickSound(isMilady: boolean): void {
+  if (isMilady) {
+    // Satisfying gold coin / chime sound
+    playChord([523.25, 659.25, 783.99], 0.2, 0.05); // C5, E5, G5 major chord
+    setTimeout(() => playTone(1046.5, 0.15, "sine", 0.04), 50); // C6 sparkle
+  } else {
+    // Simple click
+    playTone(300, 0.06, "triangle", 0.04);
+  }
+}
+
+function playSendSound(): void {
+  // Ascending triumphant chime - like sending a message into the world
+  playTone(523.25, 0.15, "sine", 0.07); // C5
+  setTimeout(() => playTone(659.25, 0.15, "sine", 0.07), 60); // E5
+  setTimeout(() => playTone(783.99, 0.15, "sine", 0.07), 120); // G5
+  setTimeout(() => playTone(1046.5, 0.25, "sine", 0.08), 180); // C6 - hold longer
+  setTimeout(() => playChord([1318.5, 1568], 0.2, 0.04), 250); // E6 + G6 sparkle
+}
+
+function playMessageBlip(): void {
+  playTone(880, 0.08, "sine", 0.06); // A5 short blip
+  setTimeout(() => playTone(1100, 0.06, "sine", 0.04), 50); // Higher follow-up
+}
+
+function attachSoundEvents(tweet: HTMLElement): void {
+  if (soundsAttached.has(tweet)) return;
+  soundsAttached.add(tweet);
+
+  const isMilady = () => tweet.dataset.miladyShrinkifierEffect === "milady";
+
+  tweet.addEventListener("mouseenter", () => {
+    if (settings.mode !== "off") {
+      playHoverSound(isMilady());
+    }
+  }, { passive: true });
+
+  tweet.addEventListener("click", (e) => {
+    if (settings.mode !== "off") {
+      const target = e.target as HTMLElement;
+      // Only play on interactive elements
+      if (target.closest("a, button, [role='button'], [data-testid]")) {
+        playClickSound(isMilady());
+      }
+    }
+  }, { passive: true });
+}
+
+// Attach send sound to Post buttons
+function attachPostButtonSound(): void {
+  const postButtons = document.querySelectorAll<HTMLElement>(
+    '[data-testid="tweetButton"], [data-testid="tweetButtonInline"], [data-testid="dmComposerSendButton"]'
+  );
+
+  for (const button of postButtons) {
+    if (soundsAttached.has(button)) continue;
+    soundsAttached.add(button);
+
+    button.addEventListener("click", () => {
+      playSendSound();
+    }, { passive: true });
+  }
+}
+
+// Observe incoming messages in DMs/GCs
+let lastMessageCount = 0;
+
+function observeIncomingMessages(): void {
+  const conversationContainer = document.querySelector(
+    '[data-testid="DmActivityViewport"], [data-testid="DMDrawer"], [aria-label*="Direct message"]'
+  );
+
+  if (!conversationContainer) {
+    lastMessageCount = 0;
+    return;
+  }
+
+  const messages = conversationContainer.querySelectorAll(
+    '[data-testid="messageEntry"], [data-testid="tweetText"], [data-testid="dmComposerTextInput"]'
+  );
+
+  const currentCount = messages.length;
+
+  if (currentCount > lastMessageCount && lastMessageCount > 0 && document.hasFocus()) {
+    playMessageBlip();
+  }
+
+  lastMessageCount = currentCount;
+}
+
+// Replace "What's happening?" placeholder text
+function replacePlaceholderText(): void {
+  const placeholderElements = document.querySelectorAll<HTMLElement>(
+    '[data-testid="tweetTextarea_0_label"], .public-DraftEditorPlaceholder-inner, [data-text="true"]'
+  );
+
+  for (const el of placeholderElements) {
+    if (el.textContent?.includes("What") || el.textContent?.includes("happening")) {
+      el.textContent = "milady";
+    }
+  }
+
+  const textareas = document.querySelectorAll<HTMLElement>(
+    '[placeholder*="What"], [aria-label*="What"]'
+  );
+
+  for (const el of textareas) {
+    if (el.getAttribute("placeholder")?.includes("What")) {
+      el.setAttribute("placeholder", "milady");
+    }
+    if (el.getAttribute("aria-label")?.includes("What")) {
+      el.setAttribute("aria-label", "milady");
+    }
+  }
+}
+
+// Replace X logo with custom milady logo
+function replaceXLogo(): void {
+  const logoUrl = chrome.runtime.getURL("milady-logo.png");
+
+  const logoLinks = document.querySelectorAll<HTMLElement>(
+    'a[href="/home"] svg, [data-testid="xLogo"], [aria-label="X"] svg, h1 a[href="/home"] svg'
+  );
+
+  for (const svg of logoLinks) {
+    const container = svg.closest("a, div");
+    if (!container || container.querySelector(".milady-logo-replacement")) continue;
+
+    svg.style.display = "none";
+
+    const img = document.createElement("img");
+    img.src = logoUrl;
+    img.className = "milady-logo-replacement";
+    img.style.cssText = `
+      width: 32px;
+      height: 32px;
+      object-fit: contain;
+      image-rendering: pixelated;
+      filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.4));
+    `;
+
+    container.appendChild(img);
+  }
+
+  const splashLogo = document.querySelector<SVGElement>('#placeholder > svg');
+  if (splashLogo && !document.querySelector(".milady-splash-logo")) {
+    const img = document.createElement("img");
+    img.src = logoUrl;
+    img.className = "milady-splash-logo";
+    img.style.cssText = `
+      width: 64px;
+      height: 64px;
+      object-fit: contain;
+      image-rendering: pixelated;
+    `;
+    splashLogo.replaceWith(img);
+  }
+}
 
 interface ResolvedModel {
   metadata: ModelMetadata;
@@ -74,6 +297,10 @@ async function boot(): Promise<void> {
   const observer = new MutationObserver(() => {
     scheduleProcessVisibleTweets();
     scheduleDelayedProcessVisibleTweets();
+    attachPostButtonSound();
+    replacePlaceholderText();
+    replaceXLogo();
+    observeIncomingMessages();
   });
   observer.observe(document.body, {
     childList: true,
@@ -85,6 +312,10 @@ async function boot(): Promise<void> {
   }, RESCAN_INTERVAL_MS);
   scheduleProcessVisibleTweets();
   scheduleDelayedProcessVisibleTweets();
+  attachPostButtonSound();
+  replacePlaceholderText();
+  replaceXLogo();
+  observeIncomingMessages();
 }
 
 async function processVisibleTweets(): Promise<void> {
@@ -318,6 +549,7 @@ function findAuthor(tweet: HTMLElement): { handle: string; displayName: string |
 }
 
 function applyMode(tweet: HTMLElement, normalizedUrl?: string): void {
+  attachSoundEvents(tweet);
   clearVisualState(tweet);
   const isMatch = tweet.dataset.miladyShrinkifierState === "match";
 
