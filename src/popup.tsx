@@ -44,46 +44,26 @@ const MODE_OPTIONS: Array<{ value: FilterMode; label: string; note: string }> = 
 
 const styles = `
   :root {
-    color-scheme: light dark;
-    --bg-0: #0a0a0c;
-    --bg-1: #141418;
-    --bg-2: #1c1c22;
-    --bg-card: rgba(255, 255, 255, 0.03);
-    --line: rgba(255, 255, 255, 0.08);
-    --line-strong: rgba(255, 255, 255, 0.12);
-    --text: #f5f5f7;
-    --text-soft: rgba(245, 245, 247, 0.65);
-    --text-faint: rgba(245, 245, 247, 0.45);
-    --accent: #d4af37;
-    --accent-bright: #f0c850;
-    --accent-soft: rgba(212, 175, 55, 0.15);
+    color-scheme: light;
+    --bg-0: rgb(255, 250, 235);
+    --bg-1: rgb(255, 245, 220);
+    --bg-2: rgb(255, 240, 205);
+    --bg-card: rgba(184, 134, 11, 0.06);
+    --line: rgba(140, 100, 20, 0.18);
+    --line-strong: rgba(140, 100, 20, 0.3);
+    --text: #0f0a00;
+    --text-soft: #2e2208;
+    --text-faint: #5a4818;
+    --accent: #6b4f0a;
+    --accent-bright: #8b6914;
+    --accent-soft: rgba(184, 134, 11, 0.12);
     --good: #34c759;
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --shadow-sm: 0 1px 2px rgba(140, 100, 20, 0.1);
+    --shadow-md: 0 4px 12px rgba(140, 100, 20, 0.12);
+    --shadow-lg: 0 8px 24px rgba(140, 100, 20, 0.15);
     --radius-sm: 6px;
     --radius-md: 10px;
     --radius-lg: 14px;
-  }
-
-  @media (prefers-color-scheme: light) {
-    :root {
-      --bg-0: rgba(255, 245, 215, 0.95);
-      --bg-1: rgba(255, 240, 200, 0.8);
-      --bg-2: rgba(255, 235, 185, 0.9);
-      --bg-card: rgba(184, 134, 11, 0.08);
-      --line: rgba(184, 134, 11, 0.15);
-      --line-strong: rgba(184, 134, 11, 0.25);
-      --text: #2a1f05;
-      --text-soft: rgba(42, 31, 5, 0.8);
-      --text-faint: rgba(42, 31, 5, 0.65);
-      --accent: #6b4f0a;
-      --accent-bright: #8b6914;
-      --accent-soft: rgba(184, 134, 11, 0.15);
-      --shadow-sm: 0 1px 2px rgba(184, 134, 11, 0.08);
-      --shadow-md: 0 4px 12px rgba(184, 134, 11, 0.12);
-      --shadow-lg: 0 8px 24px rgba(184, 134, 11, 0.15);
-    }
   }
 
   * {

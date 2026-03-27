@@ -70,7 +70,7 @@ export function injectStyles(): void {
       position: relative !important;
       z-index: 1 !important;
       border-radius: 12px !important;
-      margin: 2px 0 !important;
+      margin: 4px 6px !important;
       border: 1px solid rgba(212, 175, 55, 0.4) !important;
       box-shadow:
         0 4px 8px rgba(0, 0, 0, 0.1),
@@ -205,11 +205,11 @@ export function injectStyles(): void {
     /* Dark mode - rich silver card */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"] {
-      background: linear-gradient(180deg, rgb(20, 22, 30) 0%, rgb(14, 16, 22) 100%) !important;
-      border: 1px solid rgba(120, 125, 150, 0.3) !important;
+      background: linear-gradient(180deg, rgb(24, 26, 36) 0%, rgb(17, 19, 27) 100%) !important;
+      border: 1px solid rgba(110, 115, 140, 0.3) !important;
       box-shadow:
-        0 4px 14px rgba(120, 125, 150, 0.06),
-        inset 0 1px 0 rgba(160, 165, 185, 0.1) !important;
+        0 4px 14px rgba(110, 115, 140, 0.06),
+        inset 0 1px 0 rgba(150, 155, 175, 0.1) !important;
     }
 
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"]::before,
@@ -261,11 +261,11 @@ export function injectStyles(): void {
     /* Dark mode liked - subtly richer than base */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"] {
-      background: linear-gradient(180deg, rgb(34, 28, 12) 0%, rgb(26, 21, 9) 100%) !important;
-      border-color: rgba(170, 138, 48, 0.4) !important;
+      background: linear-gradient(180deg, rgb(48, 40, 16) 0%, rgb(36, 30, 12) 100%) !important;
+      border-color: rgba(190, 155, 55, 0.45) !important;
       box-shadow:
         0 4px 16px rgba(150, 120, 42, 0.08),
-        inset 0 1px 0 rgba(200, 165, 60, 0.12) !important;
+        inset 0 1px 0 rgba(220, 180, 70, 0.16) !important;
     }
 
     /* Add spacing between milady user cells */
