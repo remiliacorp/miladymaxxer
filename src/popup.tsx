@@ -475,10 +475,7 @@ function App() {
         <Show when={tab() === "stats"}>
           <section class="panel">
             <div class="panel-header">
-              <div>
-                <h2 class="panel-title">Session</h2>
-                <p class="section-note">This session.</p>
-              </div>
+              <div />
               <div class="actions">
                 <button type="button" class="action-button" onClick={() => void handleResetStats()}>
                   Reset
