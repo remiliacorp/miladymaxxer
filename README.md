@@ -21,23 +21,14 @@ Everything runs locally. No server calls, no telemetry, nothing leaves your brow
 
 ## Install
 
-There is no Chrome Web Store release yet.
+There is no Chrome Web Store release. Install from GitHub Releases instead:
 
-To run it locally:
-
-1. Install JavaScript dependencies:
-   ```bash
-   pnpm install
-   ```
-2. Install Python dependencies for the classifier and labeling pipeline:
-   ```bash
-   uv sync
-   ```
-3. Build the extension:
-   ```bash
-   pnpm run build
-   ```
-4. Load `dist/` as an unpacked extension in Chrome.
+1. Download the latest `milady-shrinkifier-vX.Y.Z-unpacked.zip` from Releases.
+2. Unzip it somewhere permanent on disk.
+3. Open `chrome://extensions`.
+4. Enable `Developer mode`.
+5. Click `Load unpacked`.
+6. Select the unzipped folder.
 
 ## Notes
 
