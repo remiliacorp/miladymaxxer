@@ -486,7 +486,8 @@ function App() {
               </div>
             </div>
             <dl class="stats-grid">
-              <div><dt>Posts matched</dt><dd>{formatNumber(stats().postsMatched)}</dd></div>
+              <div><dt>Posts seen</dt><dd>{formatNumber(stats().tweetsScanned)}</dd></div>
+              <div><dt>Posts detected</dt><dd>{formatNumber(stats().postsMatched)}</dd></div>
               <div><dt>Match rate</dt><dd>{matchRateLabel()}</dd></div>
               <div><dt>Whitelisted</dt><dd>{formatNumber(whitelistedAccounts().length)}</dd></div>
               <div><dt>Errors</dt><dd>{formatNumber(stats().errors)}</dd></div>
