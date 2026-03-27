@@ -148,8 +148,8 @@ function getSelectedMode(form: HTMLFormElement): FilterMode {
   const selected = new FormData(form).get("mode");
   if (
     selected === "hide" ||
-    selected === "scale" ||
     selected === "fade" ||
+    selected === "debug" ||
     selected === "off"
   ) {
     return selected;

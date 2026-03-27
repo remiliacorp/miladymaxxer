@@ -51,13 +51,18 @@ const profileDirectory = useLocalProfile
   ? "Default"
   : await resolveChromeProfileDirectory(systemProfileLabel);
 const userDataDir = useLocalProfile ? localDebugUserDataDir : chromeUserDataRoot;
+const shouldForceLoadExtension = !useLocalProfile;
 
 const chromeArgs = [
   `--user-data-dir=${userDataDir}`,
   `--profile-directory=${profileDirectory}`,
   `--remote-debugging-port=${remoteDebuggingPort}`,
-  `--disable-extensions-except=${extensionPath}`,
-  `--load-extension=${extensionPath}`,
+  ...(shouldForceLoadExtension
+    ? [
+        `--disable-extensions-except=${extensionPath}`,
+        `--load-extension=${extensionPath}`,
+      ]
+    : []),
   "https://x.com/",
 ];
 
@@ -75,6 +80,9 @@ console.log(
 );
 console.log(`[launch-debug-chrome] user data dir: ${userDataDir}`);
 console.log(`[launch-debug-chrome] remote debugging: http://127.0.0.1:${remoteDebuggingPort}`);
+if (useLocalProfile) {
+  console.log("[launch-debug-chrome] load the unpacked extension manually in this profile; Chrome will persist it.");
+}
 console.log(
   "[launch-debug-chrome] close all normal Chrome windows first if launch fails due to a profile lock.",
 );

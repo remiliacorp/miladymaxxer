@@ -1,5 +1,7 @@
 import type { RuntimeImageFeatures } from "./runtime-image-types";
 
+export type CropVariant = "center" | "top";
+
 export async function loadCorsImage(url: string): Promise<HTMLImageElement> {
   const image = new Image();
   image.crossOrigin = "anonymous";
@@ -15,7 +17,10 @@ export async function loadCorsImage(url: string): Promise<HTMLImageElement> {
   return image;
 }
 
-export async function computeBrowserImageFeatures(image: HTMLImageElement): Promise<RuntimeImageFeatures> {
+export async function computeBrowserImageFeatures(
+  image: HTMLImageElement,
+  variant: CropVariant = "center",
+): Promise<RuntimeImageFeatures> {
   const hashCanvas = document.createElement("canvas");
   hashCanvas.width = 9;
   hashCanvas.height = 8;
@@ -23,7 +28,7 @@ export async function computeBrowserImageFeatures(image: HTMLImageElement): Prom
   if (!hashContext) {
     throw new Error("Unable to create 2D context");
   }
-  hashContext.drawImage(image, 0, 0, 9, 8);
+  drawCoverImage(hashContext, image, 9, 8, variant);
   const hashPixels = hashContext.getImageData(0, 0, 9, 8).data;
 
   const featureCanvas = document.createElement("canvas");
@@ -33,7 +38,7 @@ export async function computeBrowserImageFeatures(image: HTMLImageElement): Prom
   if (!featureContext) {
     throw new Error("Unable to create feature context");
   }
-  featureContext.drawImage(image, 0, 0, 32, 32);
+  drawCoverImage(featureContext, image, 32, 32, variant);
   const modelPixels = featureContext.getImageData(0, 0, 32, 32).data;
 
   return {
@@ -41,6 +46,25 @@ export async function computeBrowserImageFeatures(image: HTMLImageElement): Prom
     averageColor: computeAverageColorFromRgba(hashPixels),
     modelFeatures: computeModelFeatures(modelPixels),
   };
+}
+
+function drawCoverImage(
+  context: CanvasRenderingContext2D,
+  image: CanvasImageSource,
+  targetWidth: number,
+  targetHeight: number,
+  variant: CropVariant,
+): void {
+  const imageWidth = "naturalWidth" in image ? image.naturalWidth : targetWidth;
+  const imageHeight = "naturalHeight" in image ? image.naturalHeight : targetHeight;
+  const scale = Math.max(targetWidth / imageWidth, targetHeight / imageHeight);
+  const scaledWidth = imageWidth * scale;
+  const scaledHeight = imageHeight * scale;
+  const offsetX = (targetWidth - scaledWidth) / 2;
+  const offsetY = variant === "top" ? 0 : (targetHeight - scaledHeight) / 2;
+
+  context.clearRect(0, 0, targetWidth, targetHeight);
+  context.drawImage(image, offsetX, offsetY, scaledWidth, scaledHeight);
 }
 
 function computeAverageColorFromRgba(buffer: Uint8ClampedArray): [number, number, number] {

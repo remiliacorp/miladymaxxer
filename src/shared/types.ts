@@ -1,4 +1,4 @@
-export type FilterMode = "off" | "hide" | "scale" | "fade";
+export type FilterMode = "off" | "hide" | "fade" | "debug";
 
 export interface ExtensionSettings {
   mode: FilterMode;

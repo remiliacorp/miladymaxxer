@@ -32,7 +32,7 @@ export async function resetStats(): Promise<void> {
 }
 
 function isMode(value: unknown): value is ExtensionSettings["mode"] {
-  return value === "off" || value === "hide" || value === "scale" || value === "fade";
+  return value === "off" || value === "hide" || value === "fade" || value === "debug";
 }
 
 function normalizeStats(value: unknown): DetectionStats {

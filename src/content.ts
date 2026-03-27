@@ -28,7 +28,6 @@ import type {
 
 const STYLE_ID = "milady-shrinkifier-style";
 const ARTICLE_SELECTOR = 'article[data-testid="tweet"]';
-const SCALE_FACTOR = 0.5;
 const cache = new Map<string, Promise<DetectionResult>>();
 const processed = new WeakMap<HTMLElement, string>();
 const placeholders = new WeakMap<HTMLElement, HTMLDivElement>();
@@ -78,6 +77,8 @@ async function processTweet(tweet: HTMLElement): Promise<void> {
   const avatar = findAvatar(tweet);
   if (!avatar) {
     clearEffects(tweet);
+    delete tweet.dataset.miladyShrinkifier;
+    delete tweet.dataset.miladyShrinkifierState;
     return;
   }
 
@@ -92,6 +93,7 @@ async function processTweet(tweet: HTMLElement): Promise<void> {
   const result = await detectAvatar(avatar, normalizedUrl);
   if (result.matched) {
     tweet.dataset.miladyShrinkifier = result.source ?? "match";
+    tweet.dataset.miladyShrinkifierState = "match";
     incrementMatchStats(result);
     applyMode(tweet);
     return;
@@ -99,6 +101,8 @@ async function processTweet(tweet: HTMLElement): Promise<void> {
 
   clearEffects(tweet);
   delete tweet.dataset.miladyShrinkifier;
+  tweet.dataset.miladyShrinkifierState = "miss";
+  applyMode(tweet);
 }
 
 async function detectAvatar(image: HTMLImageElement, normalizedUrl: string): Promise<DetectionResult> {
@@ -118,36 +122,68 @@ async function detectAvatarUncached(image: HTMLImageElement, normalizedUrl: stri
   try {
     const database = await loadHashDatabase();
     const runtimeImage = await loadCorsImage(normalizedUrl);
-    const features = await computeBrowserImageFeatures(runtimeImage);
-    const candidate = findBestCandidate(features.hash, features.averageColor, database.hashes);
-    const distance = candidate.distance;
-    const averageColorDistance = colorDistance(features.averageColor, candidate.entry.averageColor);
+    const variants = await Promise.all([
+      computeBrowserImageFeatures(runtimeImage, "center"),
+      computeBrowserImageFeatures(runtimeImage, "top"),
+    ]);
+    const candidates = variants.map((features) => {
+      const candidate = findBestCandidate(features.hash, features.averageColor, database.hashes);
+      return {
+        features,
+        candidate,
+        averageColorDistance: colorDistance(features.averageColor, candidate.entry.averageColor),
+      };
+    });
+    const strongMatch = candidates.find(
+      ({ candidate, averageColorDistance }) =>
+        candidate.distance <= HASH_MATCH_THRESHOLD &&
+        averageColorDistance <= COLOR_DISTANCE_THRESHOLD,
+    );
 
-    if (distance <= HASH_MATCH_THRESHOLD && averageColorDistance <= COLOR_DISTANCE_THRESHOLD) {
+    if (strongMatch) {
       return {
         matched: true,
         source: "phash",
-        score: distance,
-        tokenId: candidate.entry.tokenId,
+        score: strongMatch.candidate.distance,
+        tokenId: strongMatch.candidate.entry.tokenId,
       };
     }
 
-    if (distance > HASH_ONNX_THRESHOLD) {
+    const best = candidates.reduce((currentBest, entry) => {
+      if (!currentBest) {
+        return entry;
+      }
+
+      if (entry.candidate.distance < currentBest.candidate.distance) {
+        return entry;
+      }
+
+      if (
+        entry.candidate.distance === currentBest.candidate.distance &&
+        entry.averageColorDistance < currentBest.averageColorDistance
+      ) {
+        return entry;
+      }
+
+      return currentBest;
+    }, candidates[0]);
+
+    if (best.candidate.distance > HASH_ONNX_THRESHOLD) {
       return {
         matched: false,
         source: null,
-        score: distance,
+        score: best.candidate.distance,
         tokenId: null,
       };
     }
 
-    const score = await scoreWithOnnx(features.modelFeatures, normalizedUrl);
+    const score = await scoreWithOnnx(best.features.modelFeatures, normalizedUrl);
     const metadata = await loadModelMetadata();
     return {
       matched: score >= metadata.threshold,
       source: score >= metadata.threshold ? "onnx" : null,
       score,
-      tokenId: score >= metadata.threshold ? candidate.entry.tokenId : null,
+      tokenId: score >= metadata.threshold ? best.candidate.entry.tokenId : null,
     };
   } catch (error) {
     console.error("Milady detection failed", error);
@@ -162,24 +198,38 @@ async function detectAvatarUncached(image: HTMLImageElement, normalizedUrl: stri
 }
 
 function findAvatar(tweet: HTMLElement): HTMLImageElement | null {
-  return tweet.querySelector<HTMLImageElement>('img[src*="profile_images"]');
+  return (
+    tweet.querySelector<HTMLImageElement>('[data-testid="Tweet-User-Avatar"] img[src*="profile_images"]') ??
+    tweet.querySelector<HTMLImageElement>('img[src*="profile_images"]')
+  );
 }
 
 function applyMode(tweet: HTMLElement): void {
   clearVisualClasses(tweet);
+  const isMatch = tweet.dataset.miladyShrinkifierState === "match";
 
   switch (settings.mode) {
     case "hide":
+      if (!isMatch) {
+        clearPlaceholder(tweet);
+        tweet.style.display = "";
+        return;
+      }
       applyHiddenState(tweet);
       return;
-    case "scale":
-      clearPlaceholder(tweet);
-      applyScaledState(tweet);
-      tweet.style.display = "";
-      return;
     case "fade":
+      if (!isMatch) {
+        clearPlaceholder(tweet);
+        tweet.style.display = "";
+        return;
+      }
       clearPlaceholder(tweet);
       tweet.classList.add("milady-shrinkifier-fade");
+      tweet.style.display = "";
+      return;
+    case "debug":
+      clearPlaceholder(tweet);
+      applyDebugState(tweet);
       tweet.style.display = "";
       return;
     case "off":
@@ -196,16 +246,20 @@ function clearEffects(tweet: HTMLElement): void {
 }
 
 function clearVisualClasses(tweet: HTMLElement): void {
-  tweet.classList.remove("milady-shrinkifier-scale", "milady-shrinkifier-fade");
-  tweet.style.height = "";
-  tweet.style.overflow = "";
+  tweet.classList.remove(
+    "milady-shrinkifier-fade",
+    "milady-shrinkifier-debug-match",
+    "milady-shrinkifier-debug-miss",
+  );
 }
 
-function applyScaledState(tweet: HTMLElement): void {
-  const fullHeight = Math.max(tweet.scrollHeight, tweet.getBoundingClientRect().height);
-  tweet.classList.add("milady-shrinkifier-scale");
-  tweet.style.height = `${Math.ceil(fullHeight * SCALE_FACTOR)}px`;
-  tweet.style.overflow = "hidden";
+function applyDebugState(tweet: HTMLElement): void {
+  if (tweet.dataset.miladyShrinkifierState === "match") {
+    tweet.classList.add("milady-shrinkifier-debug-match");
+    return;
+  }
+
+  tweet.classList.add("milady-shrinkifier-debug-miss");
 }
 
 function applyHiddenState(tweet: HTMLElement): void {
@@ -249,14 +303,20 @@ function injectStyles(): void {
   const style = document.createElement("style");
   style.id = STYLE_ID;
   style.textContent = `
-    .milady-shrinkifier-scale {
-      transform: scale(0.5);
-      transform-origin: top left;
-      will-change: transform;
-    }
-
     .milady-shrinkifier-fade {
       opacity: 0.5;
+    }
+
+    .milady-shrinkifier-debug-match {
+      box-shadow: inset 0 0 0 2px rgba(46, 204, 113, 0.95);
+      border-radius: 18px;
+      background-image: linear-gradient(rgba(46, 204, 113, 0.08), rgba(46, 204, 113, 0.08));
+    }
+
+    .milady-shrinkifier-debug-miss {
+      box-shadow: inset 0 0 0 2px rgba(231, 76, 60, 0.75);
+      border-radius: 18px;
+      background-image: linear-gradient(rgba(231, 76, 60, 0.04), rgba(231, 76, 60, 0.04));
     }
 
     .milady-shrinkifier-placeholder {
