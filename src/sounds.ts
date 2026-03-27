@@ -23,6 +23,26 @@ let audioContext: AudioContext | null = null;
 const soundsAttached = new WeakSet<HTMLElement>();
 let dmListenersAttached = false;
 
+// Eagerly create & resume AudioContext on first user gesture so it's
+// ready for non-gesture sounds (MutationObserver callbacks, etc.)
+function ensureAudioContext(): void {
+  if (audioContext && audioContext.state === "running") return;
+  if (!audioContext) {
+    try {
+      audioContext = new AudioContext();
+    } catch {
+      return;
+    }
+  }
+  if (audioContext.state === "suspended") {
+    void audioContext.resume();
+  }
+}
+
+// Bootstrap: listen for any user gesture to unlock audio
+document.addEventListener("click", ensureAudioContext, { once: false, passive: true, capture: true });
+document.addEventListener("keydown", ensureAudioContext, { once: false, passive: true, capture: true });
+
 // AudioContext can only be created/resumed after a real user gesture (click/keydown).
 // Hover events don't qualify, so pass hoverOnly=true to silently skip.
 function getAudioContext(hoverOnly = false): AudioContext | null {
