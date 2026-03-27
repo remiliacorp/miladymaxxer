@@ -2,6 +2,7 @@ import {
   CLASSIFIER_MODEL_METADATA_URL,
   CLASSIFIER_MODEL_URL,
   DEFAULT_SETTINGS,
+  DEFAULT_STATS,
   LEGACY_MODEL_METADATA_URL,
   LEGACY_MODEL_URL,
 } from "./shared/constants";
@@ -12,15 +13,24 @@ import {
 import {
   normalizeProfileImageUrl,
 } from "./shared/image-core";
+import { parseCount } from "./shared/parse-count";
 import {
   loadCollectedAvatars,
   loadMatchedAccounts,
   loadSettings,
   loadStats,
+  normalizeCollectedAvatars,
+  normalizeHandle,
+  normalizeMatchedAccounts,
+  normalizeStats,
+  normalizeWhitelistHandles,
+  readNumber,
   saveCollectedAvatars,
   saveMatchedAccounts,
   saveStats,
+  uniqueStrings,
 } from "./shared/storage";
+import { LRUCache } from "./shared/lru-cache";
 import type {
   CollectedAvatarMap,
   DetectionStats,
@@ -36,8 +46,10 @@ const STYLE_ID = "miladymaxxer-style";
 const ARTICLE_SELECTOR = 'article[data-testid="tweet"]';
 const NOTIFICATION_SELECTOR = 'article[data-testid="notification"]';
 const USER_CELL_SELECTOR = '[data-testid="UserCell"], [data-testid="user-cell"]';
-const RESCAN_INTERVAL_MS = 1000;
-const cache = new Map<string, Promise<DetectionResult>>();
+const RESCAN_INTERVAL_MS = 5000;
+const CACHE_MAX_SIZE = 1000;
+
+const cache = new LRUCache<string, Promise<DetectionResult>>(CACHE_MAX_SIZE);
 const processed = new WeakMap<HTMLElement, string>();
 const processedNotifications = new WeakMap<HTMLElement, string>();
 const placeholders = new WeakMap<HTMLElement, HTMLDivElement>();
@@ -53,6 +65,8 @@ let stats: DetectionStats | null = null;
 let matchedAccounts: MatchedAccountMap | null = null;
 let collectedAvatars: CollectedAvatarMap | null = null;
 let localStateWriteScheduled = false;
+let miladyLikesThisSession = 0;
+const countedLikes = new WeakSet<HTMLElement>();
 let audioContext: AudioContext | null = null;
 const soundsAttached = new WeakSet<HTMLElement>();
 
@@ -194,7 +208,7 @@ function attachSoundEvents(tweet: HTMLElement): void {
   const mediaElements = tweet.querySelectorAll<HTMLElement>(
     '[data-testid="tweetPhoto"], [data-testid="videoPlayer"], [data-testid="card.wrapper"]'
   );
-  for (const media of mediaElements) {
+  for (const media of Array.from(mediaElements)) {
     if (soundsAttached.has(media)) continue;
     soundsAttached.add(media);
     media.addEventListener("mouseenter", () => {
@@ -220,7 +234,7 @@ function attachPostButtonSound(): void {
     '[data-testid="tweetButton"], [data-testid="tweetButtonInline"]'
   );
 
-  for (const button of postButtons) {
+  for (const button of Array.from(postButtons)) {
     if (soundsAttached.has(button)) continue;
     soundsAttached.add(button);
 
@@ -245,15 +259,6 @@ function attachDMSounds(): void {
 
     const target = e.target as HTMLElement;
 
-    // Debug: log what was clicked
-    console.log("[Miladymaxxer] Click:", {
-      tagName: target.tagName,
-      testId: target.getAttribute("data-testid"),
-      ariaLabel: target.getAttribute("aria-label"),
-      parentTestId: target.parentElement?.getAttribute("data-testid"),
-      closestButton: target.closest("button")?.getAttribute("data-testid"),
-    });
-
     // Find the button that was clicked (might be the target or an ancestor)
     const button = target.closest("button") as HTMLElement | null;
 
@@ -264,7 +269,6 @@ function attachDMSounds(): void {
 
       if (testId.includes("send") || testId.includes("Send") ||
           ariaLabel.includes("Send") || ariaLabel === "Send") {
-        console.log("[Miladymaxxer] Send button detected!");
         playSendSound();
         return;
       }
@@ -277,7 +281,6 @@ function attachDMSounds(): void {
       // Check if aria-label is a single emoji or starts with emoji
       if (/^[\p{Emoji}\u200d]+$/u.test(ariaLabel) ||
           /^[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u.test(ariaLabel)) {
-        console.log("[Miladymaxxer] Emoji reaction detected!");
         playReactionSound();
         return;
       }
@@ -287,7 +290,6 @@ function attachDMSounds(): void {
     const dmConv = target.closest('[data-testid="conversation"]') ||
                    target.closest('[data-testid="cellInnerDiv"]');
     if (dmConv && window.location.pathname.includes("/messages")) {
-      console.log("[Miladymaxxer] DM conversation click!");
       playClickSound(false);
     }
   }, { passive: true, capture: true });
@@ -305,7 +307,6 @@ function attachDMSounds(): void {
     const notTweetComposer = !target.closest('[data-testid="tweetTextarea_0"]');
 
     if (inDMPage && isTextbox && notTweetComposer) {
-      console.log("[Miladymaxxer] Enter in DM composer!");
       playSendSound();
     }
   }, { passive: true, capture: true });
@@ -317,8 +318,8 @@ function attachDMSounds(): void {
     const target = e.target as HTMLElement;
     const dmConv = target.closest('[data-testid="conversation"]');
 
-    if (dmConv && !soundsAttached.has(dmConv)) {
-      soundsAttached.add(dmConv);
+    if (dmConv && !soundsAttached.has(dmConv as HTMLElement)) {
+      soundsAttached.add(dmConv as HTMLElement);
       playTone(600, 0.06, "sine", 0.03);
     }
   }, { passive: true });
@@ -621,7 +622,7 @@ async function processTweet(tweet: HTMLElement): Promise<void> {
       tweet.dataset.miladymaxxerState = "match";
       incrementMatchStats(result);
       if (author) {
-        recordMatchedAccount(author.handle, author.displayName);
+        recordMatchedAccount(author.handle, author.displayName, result.score);
       }
       applyMode(tweet, normalizedUrl);
       return;
@@ -833,7 +834,7 @@ function applyMode(tweet: HTMLElement, normalizedUrl?: string): void {
           delete tweet.dataset.miladyFadeIn;
         }
         // Check for 0 likes - tint silver to encourage engagement
-        if (hasZeroLikes(tweet)) {
+        if (hasLowLikes(tweet)) {
           tweet.dataset.miladymaxxerNoLikes = "true";
         } else {
           delete tweet.dataset.miladymaxxerNoLikes;
@@ -841,6 +842,11 @@ function applyMode(tweet: HTMLElement, normalizedUrl?: string): void {
         // Check if user has liked - slightly more gold
         if (hasUserLiked(tweet)) {
           tweet.dataset.miladymaxxerLiked = "true";
+          if (!countedLikes.has(tweet)) {
+            countedLikes.add(tweet);
+            miladyLikesThisSession += 1;
+            updateBadge(miladyLikesThisSession);
+          }
         } else {
           delete tweet.dataset.miladymaxxerLiked;
         }
@@ -883,14 +889,21 @@ function clearVisualState(tweet: HTMLElement): void {
   delete tweet.dataset.miladymaxxerFollowing;
 }
 
-function hasZeroLikes(tweet: HTMLElement): boolean {
+function hasLowLikes(tweet: HTMLElement): boolean {
   const likeButton = tweet.querySelector<HTMLElement>('[data-testid="like"]');
   if (!likeButton) return false;
 
-  // Check aria-label for "0 Likes" or just "Like" (no count means 0)
+  // Check aria-label for like count
   const ariaLabel = likeButton.getAttribute("aria-label") || "";
-  if (ariaLabel === "Like" || ariaLabel === "Likes" || ariaLabel.includes("0 ")) {
-    return true;
+  if (ariaLabel === "Like" || ariaLabel === "Likes") {
+    return true; // No count means 0
+  }
+
+  // Try to extract number from aria-label (e.g., "5 Likes")
+  const ariaMatch = ariaLabel.match(/^(\d+)\s/);
+  if (ariaMatch) {
+    const count = parseInt(ariaMatch[1], 10);
+    return count < 10;
   }
 
   // Check for visible text count
@@ -898,8 +911,13 @@ function hasZeroLikes(tweet: HTMLElement): boolean {
   if (!countSpan) return true; // No count element means 0
 
   const countText = countSpan.textContent?.trim();
-  return !countText || countText === "0";
+  if (!countText) return true;
+
+  // Parse the count (handles "1.2K" etc)
+  const count = parseCount(countText);
+  return count < 10;
 }
+
 
 function hasUserLiked(tweet: HTMLElement): boolean {
   // If unlike button exists, user has liked this post
@@ -1059,17 +1077,18 @@ function injectStyles(): void {
       }
     }
 
-    /* MILADY effect - gold floating card */
+    /* MILADY effect - gold floating card with depth */
     [data-miladymaxxer-effect="milady"] {
       position: relative !important;
       z-index: 1 !important;
       border-radius: 12px !important;
       margin: 8px 4px !important;
-      border: 1px solid rgba(212, 175, 55, 0.3) !important;
+      border: 1px solid rgba(212, 175, 55, 0.4) !important;
       box-shadow:
-        0 2px 4px rgba(0, 0, 0, 0.06),
-        0 4px 12px rgba(212, 175, 55, 0.1),
-        inset 0 1px 0 rgba(255, 215, 0, 0.1) !important;
+        0 4px 8px rgba(0, 0, 0, 0.1),
+        0 8px 24px rgba(212, 175, 55, 0.2),
+        inset 0 1px 0 rgba(255, 215, 0, 0.15) !important;
+      transition: transform 0.2s ease, box-shadow 0.2s ease !important;
     }
 
     /* Connected milady tweets - merge adjacent cards */
@@ -1087,18 +1106,6 @@ function injectStyles(): void {
       margin-bottom: 0 !important;
     }
 
-    /* Hover effect on milady posts */
-    [data-miladymaxxer-effect="milady"] {
-      transition: transform 0.2s ease, box-shadow 0.2s ease !important;
-    }
-
-    [data-miladymaxxer-effect="milady"]:hover {
-      transform: translateY(-2px) !important;
-      box-shadow:
-        0 4px 8px rgba(0, 0, 0, 0.08),
-        0 8px 24px rgba(212, 175, 55, 0.2),
-        inset 0 1px 0 rgba(255, 215, 0, 0.15) !important;
-    }
 
     /* Dotted grey underline on display name for miladys you don't follow */
     [data-miladymaxxer-effect="milady"]:not([data-miladymaxxer-following="true"]) [data-testid="User-Name"] a[role="link"]:first-of-type {
@@ -1172,7 +1179,7 @@ function injectStyles(): void {
     }
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"] [data-testid="Tweet-User-Avatar"] {
-      filter: drop-shadow(0 0 6px rgba(160, 160, 180, 0.4)) !important;
+      filter: drop-shadow(0 0 8px rgba(170, 175, 195, 0.5)) !important;
     }
 
     /* Light mode - explicit override for silver */
@@ -1200,18 +1207,15 @@ function injectStyles(): void {
         ) !important;
     }
 
-    /* Dark mode - deep rich silver */
+    /* Dark mode - dark silver card */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"] {
-      background: linear-gradient(180deg, rgb(75, 78, 88) 0%, rgb(58, 62, 72) 50%, rgb(48, 52, 62) 100%) !important;
-      border: 1.5px solid rgba(150, 155, 175, 0.5) !important;
+      background: rgb(5, 6, 8) !important;
+      border: 1.5px solid rgba(170, 175, 190, 0.3) !important;
       box-shadow:
-        0 1px 3px rgba(0, 0, 0, 0.4),
-        0 4px 12px rgba(0, 0, 0, 0.3),
-        0 0 20px rgba(140, 145, 165, 0.2),
-        0 0 40px rgba(120, 125, 145, 0.1),
-        inset 0 1px 0 rgba(200, 205, 220, 0.2),
-        inset 0 -2px 4px rgba(0, 0, 0, 0.2) !important;
+        0 0 1px rgba(180, 185, 200, 0.4),
+        0 0 6px rgba(160, 165, 180, 0.08),
+        inset 0 1px 0 rgba(200, 205, 220, 0.06) !important;
     }
 
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"]::before,
@@ -1219,12 +1223,11 @@ function injectStyles(): void {
       background:
         linear-gradient(
           135deg,
-          rgba(180, 185, 210, 0.15) 0%,
-          rgba(160, 165, 190, 0.1) 20%,
-          rgba(255, 255, 255, 0) 45%,
-          rgba(150, 155, 180, 0.08) 70%,
-          rgba(170, 175, 200, 0.12) 90%,
-          rgba(160, 165, 190, 0.1) 100%
+          rgba(180, 185, 210, 0.04) 0%,
+          rgba(160, 165, 190, 0.02) 25%,
+          rgba(255, 255, 255, 0) 50%,
+          rgba(150, 155, 180, 0.02) 75%,
+          rgba(170, 175, 200, 0.03) 100%
         ) !important;
     }
 
@@ -1250,21 +1253,26 @@ function injectStyles(): void {
         ) !important;
     }
 
-    /* Light mode liked */
+    /* Light mode liked - subtly deeper gold (~20% richer than base) */
     html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"],
     body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"] {
-      background: linear-gradient(180deg, rgba(255, 243, 205, 1) 0%, rgba(255, 253, 245, 1) 100%) !important;
+      background: linear-gradient(180deg, rgba(255, 247, 215, 1) 0%, rgba(255, 253, 240, 1) 100%) !important;
+      border-color: rgba(212, 175, 55, 0.4) !important;
       box-shadow:
-        0 2px 6px rgba(184, 134, 11, 0.15),
-        0 4px 18px rgba(212, 175, 55, 0.2),
-        inset 0 1px 0 rgba(255, 223, 100, 0.5) !important;
+        0 2px 4px rgba(184, 134, 11, 0.1),
+        0 4px 14px rgba(212, 175, 55, 0.15),
+        inset 0 1px 0 rgba(255, 223, 100, 0.35) !important;
     }
 
-    /* Dark mode liked */
+    /* Dark mode liked - slightly warmer with gold edge */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"] {
-      background: linear-gradient(180deg, rgba(75, 60, 30, 1) 0%, rgba(58, 46, 22, 1) 100%) !important;
-      border-color: rgba(212, 175, 55, 0.55) !important;
+      background: rgb(10, 9, 5) !important;
+      border-color: rgba(212, 175, 55, 0.45) !important;
+      box-shadow:
+        0 0 1px rgba(212, 175, 55, 0.6),
+        0 0 8px rgba(212, 175, 55, 0.15),
+        inset 0 1px 0 rgba(255, 215, 0, 0.08) !important;
     }
 
     /* Add spacing between milady user cells */
@@ -1360,12 +1368,12 @@ function injectStyles(): void {
     /* Dark mode profile card */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-profile="milady"] > div > div > div:has(a[href$="/header_photo"]),
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-profile="milady"] > div > div > div:has(a[href$="/header_photo"]) {
-      background: rgba(45, 36, 20, 1) !important;
-      border-color: rgba(212, 175, 55, 0.5) !important;
+      background: rgb(8, 7, 4) !important;
+      border-color: rgba(212, 175, 55, 0.35) !important;
       box-shadow:
-        0 0 3px rgba(255, 215, 0, 0.4),
-        0 0 16px rgba(212, 175, 55, 0.25),
-        inset 0 1px 0 rgba(255, 215, 0, 0.15) !important;
+        0 0 1px rgba(212, 175, 55, 0.5),
+        0 0 6px rgba(212, 175, 55, 0.1),
+        inset 0 1px 0 rgba(255, 215, 0, 0.06) !important;
     }
 
     /* Gold Follow back button on profile pages */
@@ -1434,18 +1442,18 @@ function injectStyles(): void {
       border-top-left-radius: 0 !important;
       border-top-right-radius: 0 !important;
       margin-top: -1px !important;
-      /* Fade background from transparent at top to full color at 3% */
+      /* Fade background from transparent at top to full color at 5% */
       background: linear-gradient(to bottom,
         rgba(255, 252, 240, 0) 0%,
-        rgba(255, 252, 240, 1) 3%,
+        rgba(255, 252, 240, 1) 5%,
         rgba(255, 255, 255, 1) 100%) !important;
     }
 
     /* Fade the gold overlays at the top too */
     [data-milady-fade-in="true"]::before,
     [data-milady-fade-in="true"]::after {
-      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 3%) !important;
-      mask-image: linear-gradient(to bottom, transparent 0%, black 3%) !important;
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 5%) !important;
+      mask-image: linear-gradient(to bottom, transparent 0%, black 5%) !important;
     }
 
     /* Reset styling for quoted tweets inside milady posts - give them opaque background */
@@ -1496,11 +1504,12 @@ function injectStyles(): void {
     /* Dark mode milady quote tweets */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-quote="milady"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-quote="milady"] {
-      background: linear-gradient(180deg, rgba(60, 48, 25, 0.95) 0%, rgba(45, 36, 20, 0.95) 100%) !important;
-      border-color: rgba(212, 175, 55, 0.4) !important;
+      background: rgb(8, 7, 4) !important;
+      border-color: rgba(212, 175, 55, 0.3) !important;
       box-shadow:
-        0 2px 8px rgba(0, 0, 0, 0.3),
-        inset 0 1px 0 rgba(212, 175, 55, 0.15) !important;
+        0 0 1px rgba(212, 175, 55, 0.4),
+        0 0 4px rgba(212, 175, 55, 0.08),
+        inset 0 1px 0 rgba(212, 175, 55, 0.04) !important;
     }
 
     /* ===== NON-MILADY QUOTE TWEETS - Neutral styling, no gold ===== */
@@ -1595,57 +1604,64 @@ function injectStyles(): void {
     /* Dark mode fallback - gold glow */
     @media (prefers-color-scheme: dark) {
       [data-miladymaxxer-effect="milady"] {
-        background: rgba(28, 30, 34, 1) !important;
-        border-color: rgba(212, 175, 55, 0.3) !important;
+        background: rgb(8, 7, 4) !important;
+        border-color: rgba(212, 175, 55, 0.35) !important;
         box-shadow:
-          0 0 1px rgba(255, 215, 0, 0.4),
-          0 0 10px rgba(212, 175, 55, 0.15),
-          0 0 24px rgba(255, 215, 0, 0.08),
-          inset 0 1px 0 rgba(255, 215, 0, 0.12) !important;
+          0 0 1px rgba(212, 175, 55, 0.5),
+          0 0 6px rgba(212, 175, 55, 0.1),
+          inset 0 1px 0 rgba(255, 215, 0, 0.06) !important;
       }
     }
 
-    /* Twitter Light mode - rich gold with depth */
+    /* Twitter Light mode - gold accents */
     html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"],
     body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"] {
-      background: linear-gradient(180deg, rgb(255, 248, 220) 0%, rgb(255, 242, 200) 50%, rgb(250, 235, 190) 100%) !important;
-      border: 1.5px solid rgba(200, 160, 50, 0.5) !important;
+      background: linear-gradient(180deg, rgba(255, 251, 235, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
+      border-color: rgba(212, 175, 55, 0.3) !important;
       box-shadow:
-        0 1px 3px rgba(0, 0, 0, 0.12),
-        0 4px 12px rgba(180, 140, 40, 0.15),
-        0 0 0 1px rgba(255, 220, 130, 0.3),
-        0 8px 25px rgba(200, 160, 60, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.8),
-        inset 0 -2px 4px rgba(180, 140, 40, 0.1) !important;
+        0 2px 4px rgba(184, 134, 11, 0.08),
+        0 4px 12px rgba(212, 175, 55, 0.12),
+        inset 0 1px 0 rgba(255, 223, 100, 0.3) !important;
     }
 
-    /* Twitter Dark mode (black) - very deep rich gold */
+
+    /* Twitter Dark mode (black) - dark gold card */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"] {
-      background: linear-gradient(180deg, rgb(50, 38, 15) 0%, rgb(38, 28, 10) 50%, rgb(28, 20, 6) 100%) !important;
-      border: 1.5px solid rgba(140, 105, 35, 0.7) !important;
+      background: rgb(8, 7, 4) !important;
+      border: 1.5px solid rgba(212, 175, 55, 0.35) !important;
       box-shadow:
-        0 1px 3px rgba(0, 0, 0, 0.5),
-        0 4px 12px rgba(0, 0, 0, 0.4),
-        0 0 25px rgba(130, 100, 30, 0.4),
-        0 0 50px rgba(110, 80, 20, 0.25),
-        inset 0 1px 0 rgba(180, 140, 60, 0.3),
-        inset 0 -2px 4px rgba(0, 0, 0, 0.35) !important;
+        0 0 1px rgba(212, 175, 55, 0.5),
+        0 0 6px rgba(212, 175, 55, 0.1),
+        inset 0 1px 0 rgba(255, 215, 0, 0.06) !important;
     }
 
-    /* Gold metallic sheen - dark mode (same as light) */
+
+    /* Gold metallic sheen - dark mode - very subtle */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"]::before,
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"]::before {
       background:
         linear-gradient(
           135deg,
-          rgba(255, 248, 220, 0.6) 0%,
-          rgba(255, 223, 100, 0.15) 25%,
-          rgba(255, 255, 255, 0) 40%,
-          rgba(212, 175, 55, 0.05) 65%,
-          rgba(255, 215, 0, 0.15) 85%,
-          rgba(184, 134, 11, 0.08) 100%
+          rgba(212, 175, 55, 0.04) 0%,
+          rgba(180, 140, 50, 0.02) 25%,
+          rgba(255, 255, 255, 0) 45%,
+          rgba(160, 120, 40, 0.02) 70%,
+          rgba(212, 175, 55, 0.03) 100%
         ) !important;
+    }
+
+    /* Shimmer sweep - dark mode - subtle */
+    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"]::after,
+    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"]::after {
+      background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(212, 175, 55, 0.04) 25%,
+        rgba(255, 248, 220, 0.06) 50%,
+        rgba(212, 175, 55, 0.04) 75%,
+        rgba(255, 255, 255, 0) 100%
+      ) !important;
     }
 
     /* HDR effect on Milady avatars */
@@ -1663,16 +1679,16 @@ function injectStyles(): void {
       filter: drop-shadow(0 0 6px rgba(212, 175, 55, 0.3)) !important;
     }
 
-    /* Stronger gold glow in dark modes */
+    /* Subtle gold glow in dark modes */
     @media (prefers-color-scheme: dark) {
       [data-miladymaxxer-effect="milady"] [data-testid="Tweet-User-Avatar"] {
-        filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.35)) !important;
+        filter: drop-shadow(0 0 6px rgba(212, 175, 55, 0.2)) !important;
       }
     }
 
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"] [data-testid="Tweet-User-Avatar"],
-    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"] [data-testid="Tweet-User-Avatar"],
-      filter: drop-shadow(0 0 6px rgba(212, 175, 55, 0.3)) !important;
+    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"] [data-testid="Tweet-User-Avatar"] {
+      filter: drop-shadow(0 0 6px rgba(212, 175, 55, 0.2)) !important;
     }
 
     [data-miladymaxxer-effect="debug-match"] {
@@ -1924,7 +1940,7 @@ function incrementStat(key: keyof Omit<DetectionStats, "lastMatchAt">): void {
   scheduleLocalStateWrite();
 }
 
-function recordMatchedAccount(handle: string, displayName: string | null): void {
+function recordMatchedAccount(handle: string, displayName: string | null, score: number | null): void {
   if (!matchedAccounts) {
     return;
   }
@@ -1935,6 +1951,7 @@ function recordMatchedAccount(handle: string, displayName: string | null): void 
     displayName: displayName ?? existing?.displayName ?? null,
     postsMatched: (existing?.postsMatched ?? 0) + 1,
     lastMatchedAt: new Date().toISOString(),
+    lastDetectionScore: score ?? existing?.lastDetectionScore ?? null,
   };
   scheduleLocalStateWrite();
 }
@@ -1998,158 +2015,6 @@ function scheduleLocalStateWrite(): void {
   }, 250);
 }
 
-function normalizeStats(value: unknown): DetectionStats {
-  if (!value || typeof value !== "object") {
-    return emptyStats();
-  }
-
-  const candidate = value as Partial<DetectionStats>;
-  return {
-    tweetsScanned: readNumber(candidate.tweetsScanned),
-    avatarsChecked: readNumber(candidate.avatarsChecked),
-    cacheHits: readNumber(candidate.cacheHits),
-    postsMatched: readNumber(candidate.postsMatched),
-    modelMatches: readNumber((candidate as Record<string, unknown>).modelMatches)
-      || readNumber((candidate as Record<string, unknown>).onnxMatches),
-    errors: readNumber(candidate.errors),
-    lastMatchAt: typeof candidate.lastMatchAt === "string" ? candidate.lastMatchAt : null,
-  };
-}
-
-function readNumber(value: unknown): number {
-  return typeof value === "number" && Number.isFinite(value) ? value : 0;
-}
-
-function emptyStats(): DetectionStats {
-  return {
-    tweetsScanned: 0,
-    avatarsChecked: 0,
-    cacheHits: 0,
-    postsMatched: 0,
-    modelMatches: 0,
-    errors: 0,
-    lastMatchAt: null,
-  };
-}
-
-function normalizeWhitelistHandles(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return DEFAULT_SETTINGS.whitelistHandles;
-  }
-
-  return Array.from(
-    new Set(
-      value
-        .filter((handle): handle is string => typeof handle === "string")
-        .map((handle) => normalizeHandle(handle))
-        .filter((handle) => handle.length > 0),
-    ),
-  );
-}
-
-function normalizeMatchedAccounts(value: unknown): MatchedAccountMap {
-  if (!value || typeof value !== "object") {
-    return {};
-  }
-
-  const normalized: MatchedAccountMap = {};
-  for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
-    if (!entry || typeof entry !== "object") {
-      continue;
-    }
-
-    const candidate = entry as Record<string, unknown>;
-    const handle = normalizeHandle(
-      typeof candidate.handle === "string" && candidate.handle.length > 0 ? candidate.handle : key,
-    );
-    if (!handle) {
-      continue;
-    }
-
-    normalized[handle] = {
-      handle,
-      displayName: typeof candidate.displayName === "string" ? candidate.displayName : null,
-      postsMatched: readNumber(candidate.postsMatched),
-      lastMatchedAt: typeof candidate.lastMatchedAt === "string" ? candidate.lastMatchedAt : null,
-    };
-  }
-
-  return normalized;
-}
-
-function normalizeCollectedAvatars(value: unknown): CollectedAvatarMap {
-  if (!value || typeof value !== "object") {
-    return {};
-  }
-
-  const normalized: CollectedAvatarMap = {};
-  for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
-    if (!entry || typeof entry !== "object") {
-      continue;
-    }
-
-    const candidate = entry as Record<string, unknown>;
-    const normalizedUrl =
-      typeof candidate.normalizedUrl === "string" && candidate.normalizedUrl.length > 0
-        ? candidate.normalizedUrl
-        : key;
-    if (!normalizedUrl) {
-      continue;
-    }
-
-    normalized[normalizedUrl] = {
-      normalizedUrl,
-      originalUrl:
-        typeof candidate.originalUrl === "string" && candidate.originalUrl.length > 0
-          ? candidate.originalUrl
-          : normalizedUrl,
-      handles: normalizeStringArray(candidate.handles, true),
-      displayNames: normalizeStringArray(candidate.displayNames, false),
-      sourceSurfaces: normalizeStringArray(candidate.sourceSurfaces, false),
-      seenCount: readNumber(candidate.seenCount),
-      firstSeenAt:
-        typeof candidate.firstSeenAt === "string" ? candidate.firstSeenAt : new Date(0).toISOString(),
-      lastSeenAt:
-        typeof candidate.lastSeenAt === "string" ? candidate.lastSeenAt : new Date(0).toISOString(),
-      exampleProfileUrl:
-        typeof candidate.exampleProfileUrl === "string" ? candidate.exampleProfileUrl : null,
-      exampleNotificationUrl:
-        typeof candidate.exampleNotificationUrl === "string" ? candidate.exampleNotificationUrl : null,
-      exampleTweetUrl: typeof candidate.exampleTweetUrl === "string" ? candidate.exampleTweetUrl : null,
-      heuristicMatch:
-        typeof candidate.heuristicMatch === "boolean" ? candidate.heuristicMatch : null,
-      heuristicSource:
-        candidate.heuristicSource === "onnx" ? candidate.heuristicSource : null,
-      heuristicScore:
-        typeof candidate.heuristicScore === "number" && Number.isFinite(candidate.heuristicScore)
-          ? candidate.heuristicScore
-          : null,
-      heuristicTokenId:
-        typeof candidate.heuristicTokenId === "number" && Number.isFinite(candidate.heuristicTokenId)
-          ? candidate.heuristicTokenId
-          : null,
-      whitelisted: candidate.whitelisted === true,
-    };
-  }
-
-  return normalized;
-}
-
-function normalizeStringArray(value: unknown, normalizeHandles: boolean): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return Array.from(
-    new Set(
-      value
-        .filter((entry): entry is string => typeof entry === "string")
-        .map((entry) => normalizeHandles ? normalizeHandle(entry) : entry.trim())
-        .filter((entry) => entry.length > 0),
-    ),
-  ).sort((left, right) => left.localeCompare(right));
-}
-
 function mergeUniqueStrings(
   existing: string[] | undefined,
   incoming: string | null,
@@ -2165,12 +2030,16 @@ function mergeUniqueStrings(
   return Array.from(values).sort((left, right) => left.localeCompare(right));
 }
 
-function normalizeHandle(value: string | null | undefined): string {
-  return (value ?? "").trim().replace(/^\/+/, "").replace(/^@+/, "").toLowerCase();
-}
-
 function formatProbabilityDebugLabel(score: number, threshold: number): string {
   return `p${score.toFixed(3)} t${threshold.toFixed(3)}`;
+}
+
+function updateBadge(count: number): void {
+  try {
+    chrome.runtime.sendMessage({ type: "badge", count });
+  } catch {
+    // Service worker may not be available
+  }
 }
 
 function findTweetUrl(tweet: HTMLElement): string | null {

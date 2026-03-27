@@ -87,7 +87,7 @@ function isMode(value: unknown): value is ExtensionSettings["mode"] {
   return value === "off" || value === "milady" || value === "debug";
 }
 
-function normalizeWhitelistHandles(value: unknown): string[] {
+export function normalizeWhitelistHandles(value: unknown): string[] {
   if (!Array.isArray(value)) {
     return DEFAULT_SETTINGS.whitelistHandles;
   }
@@ -102,7 +102,7 @@ function normalizeWhitelistHandles(value: unknown): string[] {
   ).sort((left, right) => left.localeCompare(right));
 }
 
-function normalizeStats(value: unknown): DetectionStats {
+export function normalizeStats(value: unknown): DetectionStats {
   if (!value || typeof value !== "object") {
     return DEFAULT_STATS;
   }
@@ -120,11 +120,11 @@ function normalizeStats(value: unknown): DetectionStats {
   };
 }
 
-function readNumber(value: unknown): number {
+export function readNumber(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
-function normalizeMatchedAccounts(value: unknown): MatchedAccountMap {
+export function normalizeMatchedAccounts(value: unknown): MatchedAccountMap {
   if (!value || typeof value !== "object") {
     return DEFAULT_MATCHED_ACCOUNTS;
   }
@@ -149,13 +149,17 @@ function normalizeMatchedAccounts(value: unknown): MatchedAccountMap {
       displayName: typeof candidate.displayName === "string" ? candidate.displayName : null,
       postsMatched: readNumber(candidate.postsMatched),
       lastMatchedAt: typeof candidate.lastMatchedAt === "string" ? candidate.lastMatchedAt : null,
+      lastDetectionScore:
+        typeof candidate.lastDetectionScore === "number" && Number.isFinite(candidate.lastDetectionScore)
+          ? candidate.lastDetectionScore
+          : null,
     };
   }
 
   return normalized;
 }
 
-function normalizeCollectedAvatars(value: unknown): CollectedAvatarMap {
+export function normalizeCollectedAvatars(value: unknown): CollectedAvatarMap {
   if (!value || typeof value !== "object") {
     return DEFAULT_COLLECTED_AVATARS;
   }
@@ -213,7 +217,7 @@ function normalizeCollectedAvatars(value: unknown): CollectedAvatarMap {
   return normalized;
 }
 
-function uniqueStrings(
+export function uniqueStrings(
   value: unknown,
   map: (entry: string) => string = (entry) => entry.trim(),
 ): string[] {
@@ -231,6 +235,6 @@ function uniqueStrings(
   ).sort((left, right) => left.localeCompare(right));
 }
 
-function normalizeHandle(value: string): string {
-  return value.trim().replace(/^@+/, "").toLowerCase();
+export function normalizeHandle(value: string | null | undefined): string {
+  return (value ?? "").trim().replace(/^\/+/, "").replace(/^@+/, "").toLowerCase();
 }

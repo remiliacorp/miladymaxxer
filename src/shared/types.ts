@@ -21,6 +21,7 @@ export interface MatchedAccount {
   displayName: string | null;
   postsMatched: number;
   lastMatchedAt: string | null;
+  lastDetectionScore: number | null;
 }
 
 export type MatchedAccountMap = Record<string, MatchedAccount>;

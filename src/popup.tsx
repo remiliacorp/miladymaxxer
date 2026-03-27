@@ -1,16 +1,22 @@
 import { For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { render } from "solid-js/web";
 
-import { DEFAULT_SETTINGS } from "./shared/constants";
+import { DEFAULT_SETTINGS, DEFAULT_STATS } from "./shared/constants";
 import {
   loadCollectedAvatars,
   loadMatchedAccounts,
   loadSettings,
   loadStats,
+  normalizeCollectedAvatars,
+  normalizeMatchedAccounts,
+  normalizeStats,
+  normalizeWhitelistHandles,
+  readNumber,
   resetCollectedAvatars,
   resetMatchedAccounts,
   resetStats,
   saveSettings,
+  uniqueStrings,
 } from "./shared/storage";
 import type {
   CollectedAvatar,
@@ -68,11 +74,11 @@ const styles = `
       --bg-card: rgba(184, 134, 11, 0.08);
       --line: rgba(184, 134, 11, 0.15);
       --line-strong: rgba(184, 134, 11, 0.25);
-      --text: #3d2e0a;
-      --text-soft: rgba(61, 46, 10, 0.75);
-      --text-faint: rgba(61, 46, 10, 0.55);
-      --accent: #8b6914;
-      --accent-bright: #b8960c;
+      --text: #2a1f05;
+      --text-soft: rgba(42, 31, 5, 0.8);
+      --text-faint: rgba(42, 31, 5, 0.65);
+      --accent: #6b4f0a;
+      --accent-bright: #8b6914;
       --accent-soft: rgba(184, 134, 11, 0.15);
       --shadow-sm: 0 1px 2px rgba(184, 134, 11, 0.08);
       --shadow-md: 0 4px 12px rgba(184, 134, 11, 0.12);
@@ -127,48 +133,11 @@ const styles = `
     flex-direction: column;
     padding: 20px;
     background: linear-gradient(180deg, rgba(255, 240, 190, 0.98) 0%, rgba(255, 250, 235, 0.98) 100%);
-    border-radius: 16px;
-    border: 1.5px solid rgba(212, 175, 55, 0.5);
-    box-shadow:
-      0 8px 32px rgba(184, 134, 11, 0.15),
-      0 2px 8px rgba(184, 134, 11, 0.1),
-      inset 0 1px 0 rgba(255, 255, 255, 0.8),
-      inset 0 -1px 0 rgba(184, 134, 11, 0.1);
+    border-radius: 0;
+    border: none;
     overflow: hidden;
   }
 
-  /* Top gold shine */
-  .popup::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 50%;
-    background: linear-gradient(180deg,
-      rgba(255, 248, 220, 0.6) 0%,
-      rgba(255, 245, 200, 0.3) 40%,
-      transparent 100%);
-    pointer-events: none;
-    border-radius: 16px 16px 0 0;
-  }
-
-  /* Metallic sheen overlay */
-  .popup::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg,
-      rgba(255, 255, 255, 0.15) 0%,
-      transparent 40%,
-      transparent 60%,
-      rgba(255, 255, 255, 0.08) 100%);
-    pointer-events: none;
-    border-radius: 16px;
-  }
 
   .header {
     position: relative;
@@ -537,14 +506,16 @@ const styles = `
 
   .stats-grid dt {
     margin: 0 0 3px;
-    color: var(--text-faint);
-    font-size: 10px;
+    color: var(--text-soft);
+    font-size: 11px;
+    font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
   }
 
   .stats-grid dd {
     margin: 0;
+    color: var(--text);
     font-size: 16px;
     font-weight: 640;
     white-space: nowrap;
@@ -770,7 +741,7 @@ function App() {
   const [tab, setTab] = createSignal<TabId>("stats");
   const [accountSearch, setAccountSearch] = createSignal("");
   const [settings, setSettings] = createSignal(DEFAULT_SETTINGS);
-  const [stats, setStats] = createSignal<DetectionStats>(emptyStats());
+  const [stats, setStats] = createSignal<DetectionStats>(DEFAULT_STATS);
   const [matchedAccounts, setMatchedAccounts] = createSignal<MatchedAccountMap>({});
   const [collectedAvatars, setCollectedAvatars] = createSignal<CollectedAvatarMap>({});
 
@@ -847,7 +818,10 @@ function App() {
     ) => {
       if (area === "sync") {
         if (changes.mode) {
-          setSettings((current) => ({ ...current, mode: getStoredMode(changes.mode.newValue) }));
+          const mode = changes.mode.newValue;
+          if (mode === "milady" || mode === "debug" || mode === "off") {
+            setSettings((current) => ({ ...current, mode }));
+          }
         }
         if (changes.whitelistHandles) {
           setSettings((current) => ({
@@ -1050,7 +1024,10 @@ function App() {
                                 </Show>
                                 <div class="account-info" onClick={() => void toggleWhitelist(account.handle)} style="cursor: pointer">
                                   <p class="account-handle">@{account.handle}</p>
-                                  <p class="account-note">{formatNumber(account.postsMatched)} hits, exempt</p>
+                                  <p class="account-note">
+                                    {formatNumber(account.postsMatched)} hits, exempt
+                                    {account.lastDetectionScore != null && ` \u00b7 ${(account.lastDetectionScore * 100).toFixed(0)}%`}
+                                  </p>
                                 </div>
                                 <a
                                   class="account-link"
@@ -1096,7 +1073,10 @@ function App() {
                                 </Show>
                                 <div class="account-info" onClick={() => void toggleWhitelist(account.handle)} style="cursor: pointer">
                                   <p class="account-handle">@{account.handle}</p>
-                                  <p class="account-note">{formatNumber(account.postsMatched)} hits</p>
+                                  <p class="account-note">
+                                    {formatNumber(account.postsMatched)} hits
+                                    {account.lastDetectionScore != null && ` \u00b7 ${(account.lastDetectionScore * 100).toFixed(0)}%`}
+                                  </p>
                                 </div>
                                 <a
                                   class="account-link"
@@ -1161,163 +1141,6 @@ function App() {
 }
 
 render(() => <App />, document.getElementById("app")!);
-
-function getStoredMode(value: unknown): FilterMode {
-  if (value === "milady" || value === "debug" || value === "off") {
-    return value;
-  }
-  return DEFAULT_SETTINGS.mode;
-}
-
-function normalizeStats(value: unknown): DetectionStats {
-  if (!value || typeof value !== "object") {
-    return emptyStats();
-  }
-
-  const candidate = value as Partial<DetectionStats>;
-  return {
-    tweetsScanned: readNumber(candidate.tweetsScanned),
-    avatarsChecked: readNumber(candidate.avatarsChecked),
-    cacheHits: readNumber(candidate.cacheHits),
-    postsMatched: readNumber(candidate.postsMatched),
-    modelMatches: readNumber((candidate as Record<string, unknown>).modelMatches)
-      || readNumber((candidate as Record<string, unknown>).onnxMatches),
-    errors: readNumber(candidate.errors),
-    lastMatchAt: typeof candidate.lastMatchAt === "string" ? candidate.lastMatchAt : null,
-  };
-}
-
-function normalizeWhitelistHandles(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return Array.from(
-    new Set(
-      value
-        .filter((handle): handle is string => typeof handle === "string")
-        .map((handle) => handle.trim().replace(/^@+/, "").toLowerCase())
-        .filter((handle) => handle.length > 0),
-    ),
-  ).sort((left, right) => left.localeCompare(right));
-}
-
-function normalizeMatchedAccounts(value: unknown): MatchedAccountMap {
-  if (!value || typeof value !== "object") {
-    return {};
-  }
-
-  const normalized: MatchedAccountMap = {};
-  for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
-    if (!entry || typeof entry !== "object") {
-      continue;
-    }
-    const candidate = entry as Partial<MatchedAccount>;
-    const handle = typeof candidate.handle === "string" && candidate.handle.length > 0
-      ? candidate.handle
-      : key;
-    const normalizedHandle = handle.trim().replace(/^@+/, "").toLowerCase();
-    if (!normalizedHandle) {
-      continue;
-    }
-    normalized[normalizedHandle] = {
-      handle: normalizedHandle,
-      displayName: typeof candidate.displayName === "string" ? candidate.displayName : null,
-      postsMatched: readNumber(candidate.postsMatched),
-      lastMatchedAt: typeof candidate.lastMatchedAt === "string" ? candidate.lastMatchedAt : null,
-    };
-  }
-  return normalized;
-}
-
-function normalizeCollectedAvatars(value: unknown): CollectedAvatarMap {
-  if (!value || typeof value !== "object") {
-    return {};
-  }
-
-  const normalized: CollectedAvatarMap = {};
-  for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
-    if (!entry || typeof entry !== "object") {
-      continue;
-    }
-
-    const candidate = entry as Partial<CollectedAvatar>;
-    const normalizedUrl =
-      typeof candidate.normalizedUrl === "string" && candidate.normalizedUrl.length > 0
-        ? candidate.normalizedUrl
-        : key;
-    if (!normalizedUrl) {
-      continue;
-    }
-
-    normalized[normalizedUrl] = {
-      normalizedUrl,
-      originalUrl:
-        typeof candidate.originalUrl === "string" && candidate.originalUrl.length > 0
-          ? candidate.originalUrl
-          : normalizedUrl,
-      handles: normalizeStringArray(candidate.handles, true),
-      displayNames: normalizeStringArray(candidate.displayNames, false),
-      sourceSurfaces: normalizeStringArray(candidate.sourceSurfaces, false),
-      seenCount: readNumber(candidate.seenCount),
-      firstSeenAt:
-        typeof candidate.firstSeenAt === "string" ? candidate.firstSeenAt : new Date(0).toISOString(),
-      lastSeenAt:
-        typeof candidate.lastSeenAt === "string" ? candidate.lastSeenAt : new Date(0).toISOString(),
-      exampleProfileUrl:
-        typeof candidate.exampleProfileUrl === "string" ? candidate.exampleProfileUrl : null,
-      exampleNotificationUrl:
-        typeof candidate.exampleNotificationUrl === "string" ? candidate.exampleNotificationUrl : null,
-      exampleTweetUrl: typeof candidate.exampleTweetUrl === "string" ? candidate.exampleTweetUrl : null,
-      heuristicMatch:
-        typeof candidate.heuristicMatch === "boolean" ? candidate.heuristicMatch : null,
-      heuristicSource:
-        candidate.heuristicSource === "onnx" ? candidate.heuristicSource : null,
-      heuristicScore:
-        typeof candidate.heuristicScore === "number" && Number.isFinite(candidate.heuristicScore)
-          ? candidate.heuristicScore
-          : null,
-      heuristicTokenId:
-        typeof candidate.heuristicTokenId === "number" && Number.isFinite(candidate.heuristicTokenId)
-          ? candidate.heuristicTokenId
-          : null,
-      whitelisted: candidate.whitelisted === true,
-    };
-  }
-
-  return normalized;
-}
-
-function normalizeStringArray(value: unknown, normalizeHandles: boolean): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return Array.from(
-    new Set(
-      value
-        .filter((entry): entry is string => typeof entry === "string")
-        .map((entry) => normalizeHandles ? entry.trim().replace(/^@+/, "").toLowerCase() : entry.trim())
-        .filter((entry) => entry.length > 0),
-    ),
-  ).sort((left, right) => left.localeCompare(right));
-}
-
-function readNumber(value: unknown): number {
-  return typeof value === "number" && Number.isFinite(value) ? value : 0;
-}
-
-function emptyStats(): DetectionStats {
-  return {
-    tweetsScanned: 0,
-    avatarsChecked: 0,
-    cacheHits: 0,
-    postsMatched: 0,
-    modelMatches: 0,
-    errors: 0,
-    lastMatchAt: null,
-  };
-}
 
 function formatNumber(value: number): string {
   return new Intl.NumberFormat().format(value);
