@@ -56,9 +56,20 @@ let audioContext: AudioContext | null = null;
 const soundsAttached = new WeakSet<HTMLElement>();
 
 // Polyphonic sound system using Web Audio API
-function getAudioContext(): AudioContext {
+// AudioContext is created lazily on first sound (which is always triggered by user gesture)
+function getAudioContext(): AudioContext | null {
   if (!audioContext) {
-    audioContext = new AudioContext();
+    try {
+      audioContext = new AudioContext();
+    } catch {
+      // Audio not supported
+      return null;
+    }
+  }
+  // Resume is safe here because getAudioContext is only called from playTone,
+  // which is only called from user-triggered event handlers
+  if (audioContext.state === "suspended") {
+    void audioContext.resume();
   }
   return audioContext;
 }
@@ -73,9 +84,7 @@ function playTone(
 ): void {
   try {
     const ctx = getAudioContext();
-    if (ctx.state === "suspended") {
-      void ctx.resume();
-    }
+    if (!ctx) return; // Audio not yet unlocked
 
     const oscillator = ctx.createOscillator();
     const gainNode = ctx.createGain();
@@ -142,6 +151,17 @@ function playMessageBlip(): void {
   setTimeout(() => playTone(1100, 0.06, "sine", 0.04), 50); // Higher follow-up
 }
 
+function playMediaHoverSound(isMilady: boolean): void {
+  if (isMilady) {
+    // Soft shimmer for milady media
+    playTone(800, 0.1, "sine", 0.04);
+    setTimeout(() => playTone(1000, 0.08, "sine", 0.03), 40);
+  } else {
+    // Very subtle for non-milady
+    playTone(300, 0.06, "sine", 0.02);
+  }
+}
+
 function attachSoundEvents(tweet: HTMLElement): void {
   if (soundsAttached.has(tweet)) return;
   soundsAttached.add(tweet);
@@ -163,12 +183,34 @@ function attachSoundEvents(tweet: HTMLElement): void {
       }
     }
   }, { passive: true });
+
+  // Media hover sounds
+  const mediaElements = tweet.querySelectorAll<HTMLElement>(
+    '[data-testid="tweetPhoto"], [data-testid="videoPlayer"], [data-testid="card.wrapper"]'
+  );
+  for (const media of mediaElements) {
+    if (soundsAttached.has(media)) continue;
+    soundsAttached.add(media);
+    media.addEventListener("mouseenter", () => {
+      if (settings.mode !== "off") {
+        playMediaHoverSound(isMilady());
+      }
+    }, { passive: true });
+  }
 }
 
-// Attach send sound to Post buttons
+// Reaction sound - short sparkle
+function playReactionSound(): void {
+  playTone(1400, 0.08, "sine", 0.05);
+  setTimeout(() => playTone(1800, 0.06, "sine", 0.03), 40);
+}
+
 function attachPostButtonSound(): void {
+  if (settings.mode === "off") return;
+
+  // Regular tweet buttons
   const postButtons = document.querySelectorAll<HTMLElement>(
-    '[data-testid="tweetButton"], [data-testid="tweetButtonInline"], [data-testid="dmComposerSendButton"]'
+    '[data-testid="tweetButton"], [data-testid="tweetButtonInline"]'
   );
 
   for (const button of postButtons) {
@@ -176,35 +218,146 @@ function attachPostButtonSound(): void {
     soundsAttached.add(button);
 
     button.addEventListener("click", () => {
-      playSendSound();
+      if (settings.mode !== "off") {
+        playSendSound();
+      }
     }, { passive: true });
   }
 }
 
-// Observe incoming messages in DMs/GCs
+// Global DM sound handlers - set up once
+let dmListenersAttached = false;
+
+function attachDMSounds(): void {
+  if (dmListenersAttached) return;
+  dmListenersAttached = true;
+
+  // Document-level click handler for all DM interactions
+  document.addEventListener("click", (e) => {
+    if (settings.mode === "off") return;
+
+    const target = e.target as HTMLElement;
+
+    // Debug: log what was clicked
+    console.log("[Miladymaxxer] Click:", {
+      tagName: target.tagName,
+      testId: target.getAttribute("data-testid"),
+      ariaLabel: target.getAttribute("aria-label"),
+      parentTestId: target.parentElement?.getAttribute("data-testid"),
+      closestButton: target.closest("button")?.getAttribute("data-testid"),
+    });
+
+    // Find the button that was clicked (might be the target or an ancestor)
+    const button = target.closest("button") as HTMLElement | null;
+
+    // Check for send button
+    if (button) {
+      const testId = button.getAttribute("data-testid") || "";
+      const ariaLabel = button.getAttribute("aria-label") || "";
+
+      if (testId.includes("send") || testId.includes("Send") ||
+          ariaLabel.includes("Send") || ariaLabel === "Send") {
+        console.log("[Miladymaxxer] Send button detected!");
+        playSendSound();
+        return;
+      }
+    }
+
+    // Check for emoji/reaction in popup layers
+    const inLayers = target.closest("#layers");
+    if (inLayers && button) {
+      const ariaLabel = button.getAttribute("aria-label") || "";
+      // Check if aria-label is a single emoji or starts with emoji
+      if (/^[\p{Emoji}\u200d]+$/u.test(ariaLabel) ||
+          /^[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u.test(ariaLabel)) {
+        console.log("[Miladymaxxer] Emoji reaction detected!");
+        playReactionSound();
+        return;
+      }
+    }
+
+    // Check for DM conversation click
+    const dmConv = target.closest('[data-testid="conversation"]') ||
+                   target.closest('[data-testid="cellInnerDiv"]');
+    if (dmConv && window.location.pathname.includes("/messages")) {
+      console.log("[Miladymaxxer] DM conversation click!");
+      playClickSound(false);
+    }
+  }, { passive: true, capture: true });
+
+  // Document-level keydown for Enter to send
+  document.addEventListener("keydown", (e) => {
+    if (settings.mode === "off") return;
+    if (e.key !== "Enter" || e.shiftKey) return;
+
+    const target = e.target as HTMLElement;
+
+    // Check if in DM composer
+    const inDMPage = window.location.pathname.includes("/messages");
+    const isTextbox = target.getAttribute("role") === "textbox" || target.isContentEditable;
+    const notTweetComposer = !target.closest('[data-testid="tweetTextarea_0"]');
+
+    if (inDMPage && isTextbox && notTweetComposer) {
+      console.log("[Miladymaxxer] Enter in DM composer!");
+      playSendSound();
+    }
+  }, { passive: true, capture: true });
+
+  // Document-level mouseover for DM hover sounds
+  document.addEventListener("mouseover", (e) => {
+    if (settings.mode === "off") return;
+
+    const target = e.target as HTMLElement;
+    const dmConv = target.closest('[data-testid="conversation"]');
+
+    if (dmConv && !soundsAttached.has(dmConv)) {
+      soundsAttached.add(dmConv);
+      playTone(600, 0.06, "sine", 0.03);
+    }
+  }, { passive: true });
+}
+
+
+// Observe incoming messages and reactions in DMs/GCs
 let lastMessageCount = 0;
+let lastReactionCount = 0;
 
 function observeIncomingMessages(): void {
   const conversationContainer = document.querySelector(
-    '[data-testid="DmActivityViewport"], [data-testid="DMDrawer"], [aria-label*="Direct message"]'
+    '[data-testid="DmActivityViewport"], [data-testid="DMDrawer"], [data-testid="conversation"], [aria-label*="Direct message"], [aria-label*="Conversation"]'
   );
 
   if (!conversationContainer) {
     lastMessageCount = 0;
+    lastReactionCount = 0;
     return;
   }
 
+  // Count messages
   const messages = conversationContainer.querySelectorAll(
-    '[data-testid="messageEntry"], [data-testid="tweetText"], [data-testid="dmComposerTextInput"]'
+    '[data-testid="messageEntry"], [data-testid="cellInnerDiv"] [dir="auto"]'
   );
 
   const currentCount = messages.length;
 
+  // Count reactions (emoji reactions on messages)
+  const reactions = conversationContainer.querySelectorAll(
+    '[data-testid="messageReactions"], [aria-label*="reaction"], [aria-label*="Reaction"]'
+  );
+  const currentReactionCount = reactions.length;
+
+  // Play sound for new messages
   if (currentCount > lastMessageCount && lastMessageCount > 0 && document.hasFocus()) {
     playMessageBlip();
   }
 
+  // Play sound for new reactions
+  if (currentReactionCount > lastReactionCount && lastReactionCount > 0 && document.hasFocus()) {
+    playReactionSound();
+  }
+
   lastMessageCount = currentCount;
+  lastReactionCount = currentReactionCount;
 }
 
 // Replace "What's happening?" placeholder text
@@ -235,44 +388,32 @@ function replacePlaceholderText(): void {
 
 // Replace X logo with custom milady logo
 function replaceXLogo(): void {
-  const logoUrl = chrome.runtime.getURL("milady-logo.png");
+  try {
+    const logoUrl = chrome.runtime.getURL("milady-logo.png");
 
-  const logoLinks = document.querySelectorAll<HTMLElement>(
-    'a[href="/home"] svg, [data-testid="xLogo"], [aria-label="X"] svg, h1 a[href="/home"] svg'
-  );
+    // Only target the main home link in the sidebar (h1 contains the logo)
+    const homeLink = document.querySelector<HTMLAnchorElement>('h1 a[href="/home"]');
 
-  for (const svg of logoLinks) {
-    const container = svg.closest("a, div");
-    if (!container || container.querySelector(".milady-logo-replacement")) continue;
+    if (homeLink && !homeLink.querySelector(".milady-logo-replacement")) {
+      // Hide all SVGs in this link
+      homeLink.querySelectorAll("svg").forEach(s => (s as HTMLElement).style.display = "none");
 
-    svg.style.display = "none";
+      const img = document.createElement("img");
+      img.src = logoUrl;
+      img.className = "milady-logo-replacement";
+      img.style.cssText = `
+        width: 28px;
+        height: 28px;
+        object-fit: contain;
+        image-rendering: pixelated;
+        filter: drop-shadow(0 0 6px rgba(212, 175, 55, 0.4));
+        border-radius: 6px;
+      `;
 
-    const img = document.createElement("img");
-    img.src = logoUrl;
-    img.className = "milady-logo-replacement";
-    img.style.cssText = `
-      width: 32px;
-      height: 32px;
-      object-fit: contain;
-      image-rendering: pixelated;
-      filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.4));
-    `;
-
-    container.appendChild(img);
-  }
-
-  const splashLogo = document.querySelector<SVGElement>('#placeholder > svg');
-  if (splashLogo && !document.querySelector(".milady-splash-logo")) {
-    const img = document.createElement("img");
-    img.src = logoUrl;
-    img.className = "milady-splash-logo";
-    img.style.cssText = `
-      width: 64px;
-      height: 64px;
-      object-fit: contain;
-      image-rendering: pixelated;
-    `;
-    splashLogo.replaceWith(img);
+      homeLink.appendChild(img);
+    }
+  } catch {
+    // Extension context invalidated, ignore
   }
 }
 
@@ -298,6 +439,7 @@ async function boot(): Promise<void> {
     scheduleProcessVisibleTweets();
     scheduleDelayedProcessVisibleTweets();
     attachPostButtonSound();
+    attachDMSounds();
     replacePlaceholderText();
     replaceXLogo();
     observeIncomingMessages();
@@ -313,6 +455,7 @@ async function boot(): Promise<void> {
   scheduleProcessVisibleTweets();
   scheduleDelayedProcessVisibleTweets();
   attachPostButtonSound();
+  attachDMSounds();
   replacePlaceholderText();
   replaceXLogo();
   observeIncomingMessages();
@@ -548,6 +691,27 @@ function findAuthor(tweet: HTMLElement): { handle: string; displayName: string |
   };
 }
 
+// Find previous article sibling (may not be direct sibling due to Twitter's DOM)
+function findPreviousArticle(tweet: HTMLElement): HTMLElement | null {
+  // Walk up to find common parent, then find previous article
+  let current: Element | null = tweet;
+  while (current) {
+    const prev = current.previousElementSibling;
+    if (prev) {
+      // Check if it's an article or contains one
+      if (prev.matches('article[data-testid="tweet"]')) {
+        return prev as HTMLElement;
+      }
+      const article = prev.querySelector<HTMLElement>('article[data-testid="tweet"]');
+      if (article) return article;
+    }
+    current = current.parentElement;
+    // Don't go too far up
+    if (current?.matches('[data-testid="primaryColumn"], main, body')) break;
+  }
+  return null;
+}
+
 function applyMode(tweet: HTMLElement, normalizedUrl?: string): void {
   attachSoundEvents(tweet);
   clearVisualState(tweet);
@@ -560,9 +724,17 @@ function applyMode(tweet: HTMLElement, normalizedUrl?: string): void {
       tweet.style.display = "";
       if (isMatch) {
         tweet.dataset.miladyShrinkifierEffect = "milady";
+        // Check if previous tweet is non-milady for gradient effect
+        const prevArticle = findPreviousArticle(tweet);
+        if (prevArticle?.dataset.miladyShrinkifierEffect === "diminish") {
+          tweet.dataset.miladyFadeIn = "true";
+        } else {
+          delete tweet.dataset.miladyFadeIn;
+        }
         return;
       }
       tweet.dataset.miladyShrinkifierEffect = "diminish";
+      delete tweet.dataset.miladyFadeIn;
       return;
     case "debug":
       clearPlaceholder(tweet);
@@ -654,27 +826,31 @@ function injectStyles(): void {
     /* Fade the tweet text and user info */
     [data-milady-shrinkifier-effect="diminish"] [data-testid="tweetText"],
     [data-milady-shrinkifier-effect="diminish"] [data-testid="User-Name"] {
-      opacity: 0.5 !important;
+      opacity: 0.9 !important;
     }
 
-    /* Fade images and media */
+    /* Fade images and media - 80% opacity */
     [data-milady-shrinkifier-effect="diminish"] [data-testid="tweetPhoto"],
     [data-milady-shrinkifier-effect="diminish"] [data-testid="videoPlayer"],
     [data-milady-shrinkifier-effect="diminish"] [data-testid="card.wrapper"],
-    [data-milady-shrinkifier-effect="diminish"] [data-testid="card.layoutLarge.media"],
-    [data-milady-shrinkifier-effect="diminish"] [aria-label*="Image"],
-    [data-milady-shrinkifier-effect="diminish"] img:not([src*="profile_images"]):not([src*="emoji"]) {
-      opacity: 0.5 !important;
+    [data-milady-shrinkifier-effect="diminish"] [data-testid="card.layoutLarge.media"] {
+      opacity: 0.8 !important;
       transition: opacity 0.15s ease !important;
+    }
+
+    /* Milady posts - ensure full opacity on all content */
+    [data-milady-shrinkifier-effect="milady"] [data-testid="tweetPhoto"],
+    [data-milady-shrinkifier-effect="milady"] [data-testid="videoPlayer"],
+    [data-milady-shrinkifier-effect="milady"] [data-testid="card.wrapper"],
+    [data-milady-shrinkifier-effect="milady"] [data-testid="card.layoutLarge.media"] {
+      opacity: 1 !important;
     }
 
     /* Restore full opacity on hover */
     [data-milady-shrinkifier-effect="diminish"] [data-testid="tweetPhoto"]:hover,
     [data-milady-shrinkifier-effect="diminish"] [data-testid="videoPlayer"]:hover,
     [data-milady-shrinkifier-effect="diminish"] [data-testid="card.wrapper"]:hover,
-    [data-milady-shrinkifier-effect="diminish"] [data-testid="card.layoutLarge.media"]:hover,
-    [data-milady-shrinkifier-effect="diminish"] [aria-label*="Image"]:hover,
-    [data-milady-shrinkifier-effect="diminish"] img:not([src*="profile_images"]):not([src*="emoji"]):hover {
+    [data-milady-shrinkifier-effect="diminish"] [data-testid="card.layoutLarge.media"]:hover {
       opacity: 1 !important;
     }
 
@@ -704,7 +880,7 @@ function injectStyles(): void {
       position: relative !important;
       z-index: 1 !important;
       border-radius: 12px !important;
-      margin: 8px 8px !important;
+      margin: 8px 0 !important;
       border: 1px solid rgba(212, 175, 55, 0.3) !important;
       box-shadow:
         0 2px 4px rgba(0, 0, 0, 0.06),
@@ -725,6 +901,27 @@ function injectStyles(): void {
       border-bottom-left-radius: 0 !important;
       border-bottom-right-radius: 0 !important;
       margin-bottom: 0 !important;
+    }
+
+    /* Hover effect on milady posts */
+    [data-milady-shrinkifier-effect="milady"] {
+      transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+    }
+
+    [data-milady-shrinkifier-effect="milady"]:hover {
+      transform: translateY(-2px) !important;
+      box-shadow:
+        0 4px 8px rgba(0, 0, 0, 0.08),
+        0 8px 24px rgba(212, 175, 55, 0.2),
+        inset 0 1px 0 rgba(255, 215, 0, 0.15) !important;
+    }
+
+    /* Milady reply after non-milady - seamless top edge */
+    [data-milady-fade-in="true"] {
+      border-top: none !important;
+      border-top-left-radius: 0 !important;
+      border-top-right-radius: 0 !important;
+      margin-top: 0 !important;
     }
 
     /* Gold metallic sheen overlay */
