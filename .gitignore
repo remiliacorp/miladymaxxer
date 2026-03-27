@@ -2,3 +2,5 @@ dist
 node_modules
 .venv
 cache
+.playwright-chrome-profile
+.cdp-chrome-profile
