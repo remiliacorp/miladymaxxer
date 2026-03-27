@@ -1,41 +1,57 @@
-# Milady Shrinkifier
+# Miladymaxxer
 
-*protecting your timeline from the egregore since 2026*
+*elevate milady. diminish the rest.*
 
 ![hero](assets/hero.png)
 
-## Why
+## What It Does
 
-Some people find that a significant percentage of their timeline consists of accounts using aesthetically identical chibi avatars posting aesthetically identical content. This extension addresses that.
+On-device avatar detection for X/Twitter. A bundled ONNX classifier scans avatars as you scroll and applies visual effects:
 
-## How It Works
+- **Milady mode** — Gold shimmer effects, enhanced borders, logo replacement, pink hearts
+- **Sound toggle** — Optional audio feedback when miladys are detected
+- **Off** — Disable all effects
 
-A bundled ONNX classifier scans avatars as you scroll. When it spots a match, you pick what happens:
+## Features
 
-- **Hide** — collapsed behind a click-to-reveal row.
-- **Fade** — visible but at half opacity.
-- **Debug** — borders and confidence scores on every post.
-- **Off** — does nothing.
+- **Gold Follow buttons** — Shimmery gold "Follow back" for miladys who follow you, silver for those who don't
+- **Pink hearts** — Faded pink like button on milady posts to encourage engagement
+- **User cell detection** — Works in "Who to follow" sections too
+- **Dark mode optimized** — Subtle gold effects that look great on dark themes
+- **Privacy-first** — Everything runs locally, no server calls, no telemetry
 
 The popup tracks session stats (posts scanned, match rate, last sighting), keeps a list of detected accounts you can exempt individually, and collects avatar data you can export for offline labeling.
 
-Everything runs locally. No server calls, no telemetry, nothing leaves your browser unless you explicitly export it.
+## Screenshots
+
+| Timeline | Follow Button |
+|----------|---------------|
+| ![Timeline](assets/screenshot-timeline-1.png) | ![Follow Button](assets/screenshot-follow-button.png) |
 
 ## Install
 
 There is no Chrome Web Store release. Install from GitHub Releases instead:
 
-1. Download the latest `milady-shrinkifier-vX.Y.Z-unpacked.zip` from Releases.
+1. Download the latest `miladymaxxer-vX.Y.Z-unpacked.zip` from Releases.
 2. Unzip it somewhere permanent on disk.
 3. Open `chrome://extensions`.
 4. Enable `Developer mode`.
 5. Click `Load unpacked`.
 6. Select the unzipped folder.
 
+## Development
+
+See `DEVELOPMENT.md` for debugging and training workflow commands.
+
+```bash
+pnpm install      # Install dependencies
+pnpm run build    # Build extension
+pnpm run dev      # Watch mode
+pnpm test         # Run tests
+```
+
 ## Notes
 
-- Development, debugging, and training workflow commands live in `DEVELOPMENT.md`.
 - Runtime model artifacts live in `public/models/` and `public/generated/`.
-- Training runs, labels, downloaded avatars, and dataset manifests live under ignored `cache/`.
-- The review app supports both individual labeling and 9-up batch labeling.
+- Training data lives under ignored `cache/`.
 - The extension runtime is ONNX-only.
