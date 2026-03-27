@@ -17,7 +17,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--run-id", required=True, help="Training run id under cache/models/mobilenet_v3_small/")
     parser.add_argument("--checkpoint", help="Explicit checkpoint path. Defaults to cache/models/mobilenet_v3_small/<run-id>/best.pt")
     parser.add_argument("--threshold", type=float, default=None, help="Override the exported decision threshold.")
-    parser.add_argument("--opset", type=int, default=17)
+    parser.add_argument("--opset", type=int, default=18)
     return parser.parse_args()
 
 
@@ -40,6 +40,7 @@ def main() -> None:
     model.eval()
 
     wrapper = ExportWrapper(model)
+    wrapper.eval()
     dummy = torch.randn(1, 3, MODEL_IMAGE_SIZE, MODEL_IMAGE_SIZE, dtype=torch.float32)
     PUBLIC_MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
     torch.onnx.export(
