@@ -32,25 +32,25 @@ const TAB_LABELS: Array<{ id: TabId; label: string }> = [
 
 const MODE_OPTIONS: Array<{ value: FilterMode; label: string; note: string }> = [
   { value: "off", label: "Off", note: "Do nothing. Show everything." },
-  { value: "hide", label: "Hide", note: "Collapse matched posts. Tap to reveal." },
-  { value: "fade", label: "Fade", note: "50% opacity. Present but diminished." },
+  { value: "milady", label: "MILADY", note: "Elevate milady. Diminish the rest." },
   { value: "debug", label: "Debug", note: "Show detection markers and scores." },
 ];
 
 const styles = `
   :root {
     color-scheme: dark;
-    --bg-0: #0b0a0f;
-    --bg-1: #15121b;
-    --bg-2: #1d1924;
-    --line: rgba(247, 241, 232, 0.1);
-    --line-strong: rgba(247, 241, 232, 0.16);
+    --bg-0: #0a0a0c;
+    --bg-1: #12111a;
+    --bg-2: #1a1820;
+    --line: rgba(212, 175, 55, 0.15);
+    --line-strong: rgba(212, 175, 55, 0.25);
     --text: #f7f1e8;
     --text-soft: rgba(247, 241, 232, 0.72);
     --text-faint: rgba(247, 241, 232, 0.52);
-    --accent: #ff6d4a;
-    --accent-soft: rgba(255, 109, 74, 0.16);
-    --good: #7fd29d;
+    --accent: #d4af37;
+    --accent-bright: #ffd700;
+    --accent-soft: rgba(212, 175, 55, 0.2);
+    --good: #d4af37;
   }
 
   * {
@@ -65,21 +65,64 @@ const styles = `
     font-family: "Avenir Next", "Segoe UI", sans-serif;
   }
 
+  /* Custom scrollbar - gold metallic */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgba(212, 175, 55, 0.05);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(212, 175, 55, 0.4) 0%, rgba(184, 134, 11, 0.4) 100%);
+    border-radius: 4px;
+    border: 1px solid rgba(255, 215, 0, 0.2);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(212, 175, 55, 0.6) 0%, rgba(184, 134, 11, 0.6) 100%);
+  }
+
   button,
   input {
     font: inherit;
   }
 
+  @keyframes gold-shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
   .popup {
+    position: relative;
     width: 320px;
     height: 460px;
     display: flex;
     flex-direction: column;
     padding: 18px 16px 14px;
     background:
-      radial-gradient(240px 180px at top right, rgba(255, 109, 74, 0.18), transparent 70%),
+      radial-gradient(200px 150px at top left, rgba(255, 215, 0, 0.08), transparent 60%),
+      radial-gradient(180px 180px at bottom right, rgba(212, 175, 55, 0.06), transparent 50%),
       linear-gradient(180deg, var(--bg-1) 0px, var(--bg-0) 320px);
     background-repeat: no-repeat;
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    box-shadow:
+      0 0 1px rgba(255, 215, 0, 0.3),
+      0 0 20px rgba(212, 175, 55, 0.1),
+      inset 0 1px 0 rgba(255, 215, 0, 0.1);
+  }
+
+  .popup::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.5), transparent);
   }
 
   .header {
@@ -91,6 +134,11 @@ const styles = `
     font-size: 20px;
     font-weight: 680;
     letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #ffd700 0%, #d4af37 50%, #b8860b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 0 30px rgba(212, 175, 55, 0.3);
   }
 
   .lede,
@@ -145,7 +193,8 @@ const styles = `
   }
 
   .tab[data-active="true"]::after {
-    background: var(--accent);
+    background: linear-gradient(90deg, var(--accent), var(--accent-bright));
+    box-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
   }
 
   .panel {
@@ -155,6 +204,8 @@ const styles = `
     flex-direction: column;
     overflow-y: auto;
     padding-top: 14px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(212, 175, 55, 0.4) rgba(212, 175, 55, 0.05);
   }
 
   .panel-header {
@@ -239,10 +290,11 @@ const styles = `
 
   .mode-row[data-active="true"] .mode-dot {
     border-color: var(--accent);
+    box-shadow: 0 0 8px rgba(212, 175, 55, 0.4);
   }
 
   .mode-row[data-active="true"] .mode-dot::after {
-    background: var(--accent);
+    background: linear-gradient(135deg, var(--accent-bright), var(--accent));
   }
 
   .mode-label {
@@ -293,12 +345,13 @@ const styles = `
   .account-search {
     width: 100%;
     margin: 0 0 14px;
-    border: 1px solid rgba(247, 241, 232, 0.12);
+    border: 1px solid rgba(212, 175, 55, 0.2);
     border-radius: 8px;
-    background: rgba(247, 241, 232, 0.04);
+    background: rgba(212, 175, 55, 0.05);
     color: var(--text);
     padding: 9px 11px;
     outline: none;
+    transition: all 0.15s ease;
   }
 
   .account-search::placeholder {
@@ -306,8 +359,9 @@ const styles = `
   }
 
   .account-search:focus {
-    border-color: rgba(255, 109, 74, 0.5);
-    background: rgba(247, 241, 232, 0.06);
+    border-color: rgba(212, 175, 55, 0.5);
+    background: rgba(212, 175, 55, 0.08);
+    box-shadow: 0 0 12px rgba(212, 175, 55, 0.15);
   }
 
   .account-group + .account-group {
@@ -323,15 +377,31 @@ const styles = `
   }
 
   .account-row {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 10px;
     width: 100%;
-    padding: 10px 0;
+    padding: 10px 8px;
     border: 0;
-    border-bottom: 1px solid rgba(247, 241, 232, 0.08);
-    background: transparent;
+    border-radius: 8px;
+    margin-bottom: 4px;
+    background: rgba(212, 175, 55, 0.03);
+    border: 1px solid rgba(212, 175, 55, 0.1);
     color: inherit;
     text-align: left;
     cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .account-row:hover {
+    background: rgba(212, 175, 55, 0.08);
+    border-color: rgba(212, 175, 55, 0.25);
+    box-shadow: 0 0 12px rgba(212, 175, 55, 0.1);
+  }
+
+  .account-row[data-whitelisted="true"] {
+    background: rgba(212, 175, 55, 0.06);
+    border-color: rgba(212, 175, 55, 0.2);
   }
 
   .account-row[data-whitelisted="true"] .account-handle,
@@ -339,16 +409,64 @@ const styles = `
     color: var(--good);
   }
 
+  .account-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(212, 175, 55, 0.3);
+    box-shadow: 0 0 8px rgba(212, 175, 55, 0.2);
+    flex-shrink: 0;
+  }
+
+  .account-avatar-placeholder {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(184, 134, 11, 0.2) 100%);
+    border: 2px solid rgba(212, 175, 55, 0.3);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: var(--accent);
+  }
+
+  .account-info {
+    flex: 1;
+    min-width: 0;
+  }
+
   .account-handle {
-    margin: 0 0 3px;
+    margin: 0 0 2px;
     font-size: 14px;
     font-weight: 620;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .account-note {
     margin: 0;
     color: var(--text-faint);
-    font-size: 12px;
+    font-size: 11px;
+  }
+
+  .account-link {
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: rgba(212, 175, 55, 0.1);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    color: var(--accent);
+    font-size: 10px;
+    text-decoration: none;
+    transition: all 0.15s ease;
+  }
+
+  .account-link:hover {
+    background: rgba(212, 175, 55, 0.2);
+    border-color: rgba(212, 175, 55, 0.4);
   }
 
   .dataset-summary {
@@ -406,6 +524,23 @@ function App() {
     const value = stats().lastMatchAt;
     return value ? formatDate(value) : "Never";
   });
+
+  // Get avatar URL for a handle from collected avatars
+  const getAvatarUrl = (handle: string): string | null => {
+    const avatars = collectedAvatars();
+    for (const avatar of Object.values(avatars)) {
+      if (avatar.handles.includes(handle.toLowerCase())) {
+        return avatar.originalUrl;
+      }
+    }
+    return null;
+  };
+
+  // Open Twitter profile in new tab
+  const openProfile = (handle: string, event: MouseEvent) => {
+    event.stopPropagation();
+    window.open(`https://twitter.com/${handle}`, "_blank");
+  };
 
   onMount(async () => {
     const [nextSettings, nextStats, nextMatchedAccounts, nextCollectedAvatars] = await Promise.all([
@@ -489,7 +624,7 @@ function App() {
       <style>{styles}</style>
       <main class="popup">
         <header class="header">
-          <h1>Milady Shrinkifier</h1>
+          <h1>Miladymaxxer</h1>
         </header>
 
         <nav class="tabs" aria-label="Popup sections">
@@ -584,18 +719,42 @@ function App() {
                       <p class="account-group-title">Exempt</p>
                       <div class="account-list">
                         <For each={whitelistedAccounts()}>
-                          {(account) => (
-                            <button
-                              type="button"
-                              class="account-row"
-                              data-whitelisted="true"
-                              onClick={() => void toggleWhitelist(account.handle)}
-                              title={`@${account.handle} is exempt`}
-                            >
-                              <p class="account-handle">@{account.handle}</p>
-                              <p class="account-note">{formatNumber(account.postsMatched)} hits, exempt</p>
-                            </button>
-                          )}
+                          {(account) => {
+                            const avatarUrl = getAvatarUrl(account.handle);
+                            return (
+                              <div
+                                class="account-row"
+                                data-whitelisted="true"
+                                title={`@${account.handle} is exempt`}
+                              >
+                                <Show
+                                  when={avatarUrl}
+                                  fallback={<div class="account-avatar-placeholder">✦</div>}
+                                >
+                                  <img
+                                    src={avatarUrl!}
+                                    alt=""
+                                    class="account-avatar"
+                                    onClick={(e) => openProfile(account.handle, e)}
+                                    style="cursor: pointer"
+                                  />
+                                </Show>
+                                <div class="account-info" onClick={() => void toggleWhitelist(account.handle)} style="cursor: pointer">
+                                  <p class="account-handle">@{account.handle}</p>
+                                  <p class="account-note">{formatNumber(account.postsMatched)} hits, exempt</p>
+                                </div>
+                                <a
+                                  class="account-link"
+                                  href={`https://twitter.com/${account.handle}`}
+                                  target="_blank"
+                                  rel="noopener"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  View
+                                </a>
+                              </div>
+                            );
+                          }}
                         </For>
                       </div>
                     </div>
@@ -606,18 +765,42 @@ function App() {
                       <p class="account-group-title">Caught</p>
                       <div class="account-list">
                         <For each={filteredAccounts()}>
-                          {(account) => (
-                            <button
-                              type="button"
-                              class="account-row"
-                              data-whitelisted="false"
-                              onClick={() => void toggleWhitelist(account.handle)}
-                              title={`Exempt @${account.handle}`}
-                            >
-                              <p class="account-handle">@{account.handle}</p>
-                              <p class="account-note">{formatNumber(account.postsMatched)} hits</p>
-                            </button>
-                          )}
+                          {(account) => {
+                            const avatarUrl = getAvatarUrl(account.handle);
+                            return (
+                              <div
+                                class="account-row"
+                                data-whitelisted="false"
+                                title={`Exempt @${account.handle}`}
+                              >
+                                <Show
+                                  when={avatarUrl}
+                                  fallback={<div class="account-avatar-placeholder">✦</div>}
+                                >
+                                  <img
+                                    src={avatarUrl!}
+                                    alt=""
+                                    class="account-avatar"
+                                    onClick={(e) => openProfile(account.handle, e)}
+                                    style="cursor: pointer"
+                                  />
+                                </Show>
+                                <div class="account-info" onClick={() => void toggleWhitelist(account.handle)} style="cursor: pointer">
+                                  <p class="account-handle">@{account.handle}</p>
+                                  <p class="account-note">{formatNumber(account.postsMatched)} hits</p>
+                                </div>
+                                <a
+                                  class="account-link"
+                                  href={`https://twitter.com/${account.handle}`}
+                                  target="_blank"
+                                  rel="noopener"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  View
+                                </a>
+                              </div>
+                            );
+                          }}
                         </For>
                       </div>
                     </div>
@@ -671,7 +854,7 @@ function App() {
 render(() => <App />, document.getElementById("app")!);
 
 function getStoredMode(value: unknown): FilterMode {
-  if (value === "hide" || value === "fade" || value === "debug" || value === "off") {
+  if (value === "milady" || value === "debug" || value === "off") {
     return value;
   }
   return DEFAULT_SETTINGS.mode;
