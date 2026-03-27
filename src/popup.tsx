@@ -24,7 +24,7 @@ import type {
 type TabId = "filter" | "stats" | "accounts" | "dataset";
 
 const TAB_LABELS: Array<{ id: TabId; label: string }> = [
-  { id: "filter", label: "Filter" },
+  { id: "filter", label: "Config" },
   { id: "stats", label: "Stats" },
   { id: "accounts", label: "Accounts" },
   { id: "dataset", label: "Dataset" },
@@ -314,7 +314,7 @@ const styles = `
 `;
 
 function App() {
-  const [tab, setTab] = createSignal<TabId>("filter");
+  const [tab, setTab] = createSignal<TabId>("stats");
   const [settings, setSettings] = createSignal(DEFAULT_SETTINGS);
   const [stats, setStats] = createSignal<DetectionStats>(emptyStats());
   const [matchedAccounts, setMatchedAccounts] = createSignal<MatchedAccountMap>({});
