@@ -1200,16 +1200,18 @@ function injectStyles(): void {
         ) !important;
     }
 
-    /* Dark mode - silver */
+    /* Dark mode - deep rich silver */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"] {
-      background: linear-gradient(180deg, rgba(45, 45, 50, 1) 0%, rgba(35, 35, 40, 1) 100%) !important;
-      border-color: rgba(140, 140, 155, 0.4) !important;
+      background: linear-gradient(180deg, rgb(75, 78, 88) 0%, rgb(58, 62, 72) 50%, rgb(48, 52, 62) 100%) !important;
+      border: 1.5px solid rgba(150, 155, 175, 0.5) !important;
       box-shadow:
-        0 0 2px rgba(200, 200, 220, 0.3),
-        0 0 12px rgba(160, 160, 180, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1),
-        inset 0 0 20px rgba(180, 180, 200, 0.08) !important;
+        0 1px 3px rgba(0, 0, 0, 0.4),
+        0 4px 12px rgba(0, 0, 0, 0.3),
+        0 0 20px rgba(140, 145, 165, 0.2),
+        0 0 40px rgba(120, 125, 145, 0.1),
+        inset 0 1px 0 rgba(200, 205, 220, 0.2),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.2) !important;
     }
 
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"]::before,
@@ -1217,36 +1219,12 @@ function injectStyles(): void {
       background:
         linear-gradient(
           135deg,
-          rgba(200, 200, 220, 0.1) 0%,
-          rgba(160, 160, 180, 0.04) 25%,
-          rgba(255, 255, 255, 0) 50%,
-          rgba(160, 160, 180, 0.04) 75%,
-          rgba(200, 200, 220, 0.08) 100%
-        ) !important;
-    }
-
-    /* Dim mode - silver */
-    html[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"],
-    body[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"] {
-      background: linear-gradient(180deg, rgba(40, 45, 55, 1) 0%, rgba(32, 38, 48, 1) 100%) !important;
-      border-color: rgba(140, 140, 155, 0.35) !important;
-      box-shadow:
-        0 0 2px rgba(200, 200, 220, 0.25),
-        0 0 10px rgba(160, 160, 180, 0.12),
-        inset 0 1px 0 rgba(255, 255, 255, 0.08),
-        inset 0 0 18px rgba(180, 180, 200, 0.06) !important;
-    }
-
-    html[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"]::before,
-    body[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"]::before {
-      background:
-        linear-gradient(
-          135deg,
-          rgba(200, 200, 220, 0.08) 0%,
-          rgba(160, 160, 180, 0.03) 25%,
-          rgba(255, 255, 255, 0) 50%,
-          rgba(160, 160, 180, 0.03) 75%,
-          rgba(200, 200, 220, 0.06) 100%
+          rgba(180, 185, 210, 0.15) 0%,
+          rgba(160, 165, 190, 0.1) 20%,
+          rgba(255, 255, 255, 0) 45%,
+          rgba(150, 155, 180, 0.08) 70%,
+          rgba(170, 175, 200, 0.12) 90%,
+          rgba(160, 165, 190, 0.1) 100%
         ) !important;
     }
 
@@ -1287,13 +1265,6 @@ function injectStyles(): void {
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"] {
       background: linear-gradient(180deg, rgba(75, 60, 30, 1) 0%, rgba(58, 46, 22, 1) 100%) !important;
       border-color: rgba(212, 175, 55, 0.55) !important;
-    }
-
-    /* Dim mode liked */
-    html[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"],
-    body[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"] {
-      background: linear-gradient(180deg, rgba(70, 58, 35, 1) 0%, rgba(55, 45, 28, 1) 100%) !important;
-      border-color: rgba(212, 175, 55, 0.45) !important;
     }
 
     /* Add spacing between milady user cells */
@@ -1495,13 +1466,6 @@ function injectStyles(): void {
       border-color: rgb(51, 54, 57) !important;
     }
 
-    /* Dim mode quote tweets */
-    html[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"] [data-testid="quoteTweet"],
-    body[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"] [data-testid="quoteTweet"] {
-      background: rgb(30, 39, 50) !important;
-      border-color: rgb(56, 68, 77) !important;
-    }
-
     /* ===== MILADY QUOTE TWEETS - Gold styling when a milady is quoted ===== */
     [data-miladymaxxer-quote="milady"] {
       background: linear-gradient(180deg, rgba(255, 240, 190, 0.95) 0%, rgba(255, 250, 235, 0.95) 100%) !important;
@@ -1539,16 +1503,6 @@ function injectStyles(): void {
         inset 0 1px 0 rgba(212, 175, 55, 0.15) !important;
     }
 
-    /* Dim mode milady quote tweets */
-    html[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-quote="milady"],
-    body[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-quote="milady"] {
-      background: linear-gradient(180deg, rgba(55, 45, 25, 0.95) 0%, rgba(40, 35, 22, 0.95) 100%) !important;
-      border-color: rgba(212, 175, 55, 0.35) !important;
-      box-shadow:
-        0 2px 8px rgba(0, 0, 0, 0.25),
-        inset 0 1px 0 rgba(212, 175, 55, 0.12) !important;
-    }
-
     /* ===== NON-MILADY QUOTE TWEETS - Neutral styling, no gold ===== */
     [data-miladymaxxer-quote="other"] {
       background: rgb(247, 249, 249) !important;
@@ -1565,13 +1519,6 @@ function injectStyles(): void {
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-quote="other"] {
       background: rgb(22, 24, 28) !important;
       border-color: rgb(51, 54, 57) !important;
-    }
-
-    /* Dim mode non-milady quote tweets */
-    html[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-quote="other"],
-    body[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-quote="other"] {
-      background: rgb(30, 39, 50) !important;
-      border-color: rgb(56, 68, 77) !important;
     }
 
     /* Card wrappers inside milady posts */
@@ -1672,47 +1619,18 @@ function injectStyles(): void {
         inset 0 -2px 4px rgba(180, 140, 40, 0.1) !important;
     }
 
-    /* Twitter Dim mode (dark blue) - rich gold */
-    html[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"],
-    body[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"] {
-      background: linear-gradient(180deg, rgb(255, 248, 220) 0%, rgb(255, 242, 200) 50%, rgb(250, 235, 190) 100%) !important;
-      border: 1.5px solid rgba(200, 160, 50, 0.6) !important;
-      box-shadow:
-        0 1px 3px rgba(0, 0, 0, 0.2),
-        0 4px 12px rgba(180, 140, 40, 0.2),
-        0 0 0 1px rgba(255, 220, 130, 0.25),
-        0 8px 30px rgba(200, 160, 60, 0.25),
-        inset 0 1px 0 rgba(255, 255, 255, 0.8),
-        inset 0 -2px 4px rgba(180, 140, 40, 0.1) !important;
-    }
-
-    /* Twitter Dark mode (black) - rich gold */
+    /* Twitter Dark mode (black) - very deep rich gold */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"] {
-      background: linear-gradient(180deg, rgb(255, 248, 220) 0%, rgb(255, 242, 200) 50%, rgb(250, 235, 190) 100%) !important;
-      border: 1.5px solid rgba(200, 160, 50, 0.6) !important;
+      background: linear-gradient(180deg, rgb(50, 38, 15) 0%, rgb(38, 28, 10) 50%, rgb(28, 20, 6) 100%) !important;
+      border: 1.5px solid rgba(140, 105, 35, 0.7) !important;
       box-shadow:
-        0 1px 3px rgba(0, 0, 0, 0.25),
-        0 4px 12px rgba(180, 140, 40, 0.2),
-        0 0 0 1px rgba(255, 220, 130, 0.2),
-        0 8px 35px rgba(200, 160, 60, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.8),
-        inset 0 -2px 4px rgba(180, 140, 40, 0.1) !important;
-    }
-
-    /* Gold metallic sheen - dim mode (same as light) */
-    html[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"]::before,
-    body[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"]::before {
-      background:
-        linear-gradient(
-          135deg,
-          rgba(255, 248, 220, 0.6) 0%,
-          rgba(255, 223, 100, 0.15) 25%,
-          rgba(255, 255, 255, 0) 40%,
-          rgba(212, 175, 55, 0.05) 65%,
-          rgba(255, 215, 0, 0.15) 85%,
-          rgba(184, 134, 11, 0.08) 100%
-        ) !important;
+        0 1px 3px rgba(0, 0, 0, 0.5),
+        0 4px 12px rgba(0, 0, 0, 0.4),
+        0 0 25px rgba(130, 100, 30, 0.4),
+        0 0 50px rgba(110, 80, 20, 0.25),
+        inset 0 1px 0 rgba(180, 140, 60, 0.3),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.35) !important;
     }
 
     /* Gold metallic sheen - dark mode (same as light) */
@@ -1754,8 +1672,6 @@ function injectStyles(): void {
 
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"] [data-testid="Tweet-User-Avatar"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"] [data-testid="Tweet-User-Avatar"],
-    html[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"] [data-testid="Tweet-User-Avatar"],
-    body[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"] [data-testid="Tweet-User-Avatar"] {
       filter: drop-shadow(0 0 6px rgba(212, 175, 55, 0.3)) !important;
     }
 
