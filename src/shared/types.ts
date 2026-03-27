@@ -96,5 +96,6 @@ export interface WorkerRequest {
 
 export interface WorkerResponse {
   id: string;
-  score: number;
+  score?: number;
+  error?: string;
 }

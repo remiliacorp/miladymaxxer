@@ -10,8 +10,9 @@ interface InitMessage {
 
 let sessionPromise: Promise<ort.InferenceSession> | null = null;
 let positiveIndex = 1;
+let runQueue: Promise<void> = Promise.resolve();
 
-self.addEventListener("message", async (event: MessageEvent<InitMessage | WorkerRequest>) => {
+self.addEventListener("message", (event: MessageEvent<InitMessage | WorkerRequest>) => {
   const data = event.data;
 
   if ("modelUrl" in data) {
@@ -21,9 +22,22 @@ self.addEventListener("message", async (event: MessageEvent<InitMessage | Worker
       executionProviders: ["wasm"],
       graphOptimizationLevel: "all",
     });
+    runQueue = Promise.resolve();
     return;
   }
 
+  runQueue = runQueue
+    .then(() => handleInferenceRequest(data))
+    .catch((error: unknown) => {
+      const response: WorkerResponse = {
+        id: data.id,
+        error: error instanceof Error ? error.message : String(error),
+      };
+      self.postMessage(response);
+    });
+});
+
+async function handleInferenceRequest(data: WorkerRequest): Promise<void> {
   if (!sessionPromise) {
     throw new Error("Worker used before model initialization");
   }
@@ -34,6 +48,7 @@ self.addEventListener("message", async (event: MessageEvent<InitMessage | Worker
   if (!tensorData || !shape) {
     throw new Error("Worker received no tensor payload");
   }
+
   const tensor = new ort.Tensor("float32", Float32Array.from(tensorData), shape);
   const outputName = session.outputNames[0];
   const result = await session.run({
@@ -48,4 +63,4 @@ self.addEventListener("message", async (event: MessageEvent<InitMessage | Worker
   };
 
   self.postMessage(response);
-});
+}

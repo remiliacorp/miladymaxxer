@@ -53,7 +53,7 @@ let settings: ExtensionSettings = DEFAULT_SETTINGS;
 let hashDatabasePromise: Promise<HashDatabase> | null = null;
 let modelMetadataPromise: Promise<ResolvedModel> | null = null;
 let workerPromise: Promise<Worker> | null = null;
-let pendingWorker = new Map<string, (score: number) => void>();
+let pendingWorker = new Map<string, { resolve: (score: number) => void; reject: (error: Error) => void }>();
 let scanScheduled = false;
 let delayedScanTimer: number | null = null;
 let stats: DetectionStats | null = null;
@@ -632,12 +632,20 @@ async function getWorker(resolvedModel: ResolvedModel): Promise<Worker> {
     const worker = new Worker(bootstrapUrl);
     URL.revokeObjectURL(bootstrapUrl);
     worker.addEventListener("message", (event: MessageEvent<WorkerResponse>) => {
-      const resolver = pendingWorker.get(event.data.id);
-      if (!resolver) {
+      const pending = pendingWorker.get(event.data.id);
+      if (!pending) {
         return;
       }
       pendingWorker.delete(event.data.id);
-      resolver(event.data.score);
+      if (event.data.error) {
+        pending.reject(new Error(event.data.error));
+        return;
+      }
+      if (typeof event.data.score !== "number") {
+        pending.reject(new Error("Worker returned no score"));
+        return;
+      }
+      pending.resolve(event.data.score);
     });
     worker.postMessage({
       modelUrl: resolvedModel.modelUrl,
@@ -660,9 +668,9 @@ async function scoreWithOnnx(
   const scores = await Promise.all(
     (resolvedModel.kind === "classifier" ? tensors : legacyFeatures).map(
       (input, index) =>
-        new Promise<number>((resolve) => {
+        new Promise<number>((resolve, reject) => {
           const id = `${seed}:${index}:${crypto.randomUUID()}`;
-          pendingWorker.set(id, resolve);
+          pendingWorker.set(id, { resolve, reject });
           const payload: WorkerRequest =
             resolvedModel.kind === "classifier"
               ? {
