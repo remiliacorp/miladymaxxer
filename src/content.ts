@@ -117,6 +117,7 @@ function playChord(frequencies: number[], duration: number, volume: number = 0.0
 
 // Sound presets
 function playHoverSound(isMilady: boolean): void {
+  if (!settings.soundEnabled) return;
   if (isMilady) {
     // Sparkly high chime for milady
     playTone(1200, 0.12, "sine", 0.06);
@@ -128,6 +129,7 @@ function playHoverSound(isMilady: boolean): void {
 }
 
 function playClickSound(isMilady: boolean): void {
+  if (!settings.soundEnabled) return;
   if (isMilady) {
     // Satisfying gold coin / chime sound
     playChord([523.25, 659.25, 783.99], 0.2, 0.05); // C5, E5, G5 major chord
@@ -139,6 +141,7 @@ function playClickSound(isMilady: boolean): void {
 }
 
 function playSendSound(): void {
+  if (!settings.soundEnabled) return;
   // Ascending triumphant chime - like sending a message into the world
   playTone(523.25, 0.15, "sine", 0.07); // C5
   setTimeout(() => playTone(659.25, 0.15, "sine", 0.07), 60); // E5
@@ -148,11 +151,13 @@ function playSendSound(): void {
 }
 
 function playMessageBlip(): void {
+  if (!settings.soundEnabled) return;
   playTone(880, 0.08, "sine", 0.06); // A5 short blip
   setTimeout(() => playTone(1100, 0.06, "sine", 0.04), 50); // Higher follow-up
 }
 
 function playMediaHoverSound(isMilady: boolean): void {
+  if (!settings.soundEnabled) return;
   if (isMilady) {
     // Soft shimmer for milady media
     playTone(800, 0.1, "sine", 0.04);
@@ -202,6 +207,7 @@ function attachSoundEvents(tweet: HTMLElement): void {
 
 // Reaction sound - short sparkle
 function playReactionSound(): void {
+  if (!settings.soundEnabled) return;
   playTone(1400, 0.08, "sine", 0.05);
   setTimeout(() => playTone(1800, 0.06, "sine", 0.03), 40);
 }
@@ -361,32 +367,6 @@ function observeIncomingMessages(): void {
   lastReactionCount = currentReactionCount;
 }
 
-// Replace "What's happening?" placeholder text
-function replacePlaceholderText(): void {
-  const placeholderElements = document.querySelectorAll<HTMLElement>(
-    '[data-testid="tweetTextarea_0_label"], .public-DraftEditorPlaceholder-inner, [data-text="true"]'
-  );
-
-  for (const el of placeholderElements) {
-    if (el.textContent?.includes("What") || el.textContent?.includes("happening")) {
-      el.textContent = "milady";
-    }
-  }
-
-  const textareas = document.querySelectorAll<HTMLElement>(
-    '[placeholder*="What"], [aria-label*="What"]'
-  );
-
-  for (const el of textareas) {
-    if (el.getAttribute("placeholder")?.includes("What")) {
-      el.setAttribute("placeholder", "milady");
-    }
-    if (el.getAttribute("aria-label")?.includes("What")) {
-      el.setAttribute("aria-label", "milady");
-    }
-  }
-}
-
 // Replace X logo with custom milady logo
 function replaceXLogo(): void {
   try {
@@ -443,7 +423,6 @@ async function boot(): Promise<void> {
     scheduleDelayedProcessVisibleTweets();
     attachPostButtonSound();
     attachDMSounds();
-    replacePlaceholderText();
     replaceXLogo();
     observeIncomingMessages();
   });
@@ -459,7 +438,6 @@ async function boot(): Promise<void> {
   scheduleDelayedProcessVisibleTweets();
   attachPostButtonSound();
   attachDMSounds();
-  replacePlaceholderText();
   replaceXLogo();
   observeIncomingMessages();
 }
@@ -472,7 +450,53 @@ async function processVisibleTweets(): Promise<void> {
     ...tweets.map((tweet) => processTweet(tweet)),
     ...notifications.map((notification) => processNotificationGroup(notification)),
     ...userCells.map((cell) => processUserCell(cell)),
+    processProfilePage(),
   ]);
+}
+
+// Process profile page header
+async function processProfilePage(): Promise<void> {
+  if (settings.mode === "off") return;
+
+  // Check if we're on a profile page
+  const profileHeader = document.querySelector<HTMLElement>('[data-testid="primaryColumn"] [data-testid="UserName"]');
+  if (!profileHeader) return;
+
+  // Find the profile avatar
+  const avatar = document.querySelector<HTMLImageElement>('[data-testid="primaryColumn"] a[href*="/photo"] img[src*="profile_images"]');
+  if (!avatar?.src) return;
+
+  const normalizedUrl = normalizeProfileImageUrl(avatar.src);
+
+  // Find the user description/bio container
+  const userProfileContainer = profileHeader.closest('[data-testid="UserProfileHeader_Items"]')?.parentElement?.parentElement ||
+                                profileHeader.closest('[data-testid="primaryColumn"] > div > div');
+
+  if (!userProfileContainer) return;
+
+  // Skip if already processed with same avatar
+  if (processed.get(userProfileContainer as HTMLElement) === normalizedUrl) return;
+  processed.set(userProfileContainer as HTMLElement, normalizedUrl);
+
+  try {
+    const result = await detectAvatar(avatar, normalizedUrl);
+    // Only mark primaryColumn - CSS will target the right container inside
+    const primaryColumn = document.querySelector<HTMLElement>('[data-testid="primaryColumn"]');
+    if (result.matched) {
+      if (primaryColumn) {
+        primaryColumn.dataset.miladymaxxerProfile = "milady";
+      }
+    } else {
+      if (primaryColumn) {
+        delete primaryColumn.dataset.miladymaxxerProfile;
+      }
+    }
+  } catch {
+    const primaryColumn = document.querySelector<HTMLElement>('[data-testid="primaryColumn"]');
+    if (primaryColumn) {
+      delete primaryColumn.dataset.miladymaxxerProfile;
+    }
+  }
 }
 
 // Process user cells (Who to follow, search results, etc.)
@@ -760,10 +784,24 @@ function applyMode(tweet: HTMLElement, normalizedUrl?: string): void {
         } else {
           delete tweet.dataset.miladyFadeIn;
         }
+        // Check for 0 likes - tint silver to encourage engagement
+        if (hasZeroLikes(tweet)) {
+          tweet.dataset.miladymaxxerNoLikes = "true";
+        } else {
+          delete tweet.dataset.miladymaxxerNoLikes;
+        }
+        // Check if user has liked - slightly more gold
+        if (hasUserLiked(tweet)) {
+          tweet.dataset.miladymaxxerLiked = "true";
+        } else {
+          delete tweet.dataset.miladymaxxerLiked;
+        }
         return;
       }
       tweet.dataset.miladymaxxerEffect = "diminish";
       delete tweet.dataset.miladyFadeIn;
+      delete tweet.dataset.miladymaxxerNoLikes;
+      delete tweet.dataset.miladymaxxerLiked;
       return;
     case "debug":
       clearPlaceholder(tweet);
@@ -786,6 +824,31 @@ function clearEffects(tweet: HTMLElement): void {
 
 function clearVisualState(tweet: HTMLElement): void {
   delete tweet.dataset.miladymaxxerEffect;
+  delete tweet.dataset.miladymaxxerNoLikes;
+  delete tweet.dataset.miladymaxxerLiked;
+}
+
+function hasZeroLikes(tweet: HTMLElement): boolean {
+  const likeButton = tweet.querySelector<HTMLElement>('[data-testid="like"]');
+  if (!likeButton) return false;
+
+  // Check aria-label for "0 Likes" or just "Like" (no count means 0)
+  const ariaLabel = likeButton.getAttribute("aria-label") || "";
+  if (ariaLabel === "Like" || ariaLabel === "Likes" || ariaLabel.includes("0 ")) {
+    return true;
+  }
+
+  // Check for visible text count
+  const countSpan = likeButton.querySelector('span[data-testid="app-text-transition-container"]');
+  if (!countSpan) return true; // No count element means 0
+
+  const countText = countSpan.textContent?.trim();
+  return !countText || countText === "0";
+}
+
+function hasUserLiked(tweet: HTMLElement): boolean {
+  // If unlike button exists, user has liked this post
+  return !!tweet.querySelector<HTMLElement>('[data-testid="unlike"]');
 }
 
 function applyDebugState(tweet: HTMLElement): void {
@@ -909,7 +972,7 @@ function injectStyles(): void {
       position: relative !important;
       z-index: 1 !important;
       border-radius: 12px !important;
-      margin: 8px 0 !important;
+      margin: 8px 4px !important;
       border: 1px solid rgba(212, 175, 55, 0.3) !important;
       box-shadow:
         0 2px 4px rgba(0, 0, 0, 0.06),
@@ -962,6 +1025,165 @@ function injectStyles(): void {
     [data-miladymaxxer-effect="milady"] [data-testid="like"]:hover svg {
       color: rgba(249, 24, 128, 0.7) !important;
       transform: scale(1.1) !important;
+    }
+
+    /* Silver metallic for milady posts with 0 likes */
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"] {
+      background: linear-gradient(180deg, rgba(245, 245, 248, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
+      border-color: rgba(160, 160, 170, 0.4) !important;
+      box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.08),
+        0 4px 12px rgba(140, 140, 150, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+    }
+
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"]::before {
+      background:
+        linear-gradient(
+          135deg,
+          rgba(200, 200, 210, 0.2) 0%,
+          rgba(230, 230, 235, 0.25) 15%,
+          rgba(255, 255, 255, 0) 40%,
+          rgba(180, 180, 190, 0.1) 65%,
+          rgba(220, 220, 230, 0.2) 85%,
+          rgba(192, 192, 200, 0.15) 100%
+        ) !important;
+    }
+
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"]::after {
+      background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(220, 220, 230, 0.15) 25%,
+        rgba(255, 255, 255, 0.25) 50%,
+        rgba(220, 220, 230, 0.15) 75%,
+        rgba(255, 255, 255, 0) 100%
+      ) !important;
+    }
+
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"] [data-testid="Tweet-User-Avatar"] {
+      filter: drop-shadow(0 0 6px rgba(160, 160, 180, 0.4)) !important;
+    }
+
+    /* Light mode - explicit override for silver */
+    html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"],
+    body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"] {
+      background: linear-gradient(180deg, rgba(242, 242, 247, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
+      border-color: rgba(160, 160, 170, 0.4) !important;
+      box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.06),
+        0 4px 12px rgba(140, 140, 150, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+    }
+
+    html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"]::before,
+    body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"]::before {
+      background:
+        linear-gradient(
+          135deg,
+          rgba(180, 180, 195, 0.15) 0%,
+          rgba(210, 210, 220, 0.2) 15%,
+          rgba(255, 255, 255, 0) 40%,
+          rgba(170, 170, 185, 0.08) 65%,
+          rgba(200, 200, 215, 0.15) 85%,
+          rgba(185, 185, 200, 0.1) 100%
+        ) !important;
+    }
+
+    /* Dark mode - silver */
+    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"],
+    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"] {
+      background: linear-gradient(180deg, rgba(45, 45, 50, 1) 0%, rgba(35, 35, 40, 1) 100%) !important;
+      border-color: rgba(140, 140, 155, 0.4) !important;
+      box-shadow:
+        0 0 2px rgba(200, 200, 220, 0.3),
+        0 0 12px rgba(160, 160, 180, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        inset 0 0 20px rgba(180, 180, 200, 0.08) !important;
+    }
+
+    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"]::before,
+    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"]::before {
+      background:
+        linear-gradient(
+          135deg,
+          rgba(200, 200, 220, 0.1) 0%,
+          rgba(160, 160, 180, 0.04) 25%,
+          rgba(255, 255, 255, 0) 50%,
+          rgba(160, 160, 180, 0.04) 75%,
+          rgba(200, 200, 220, 0.08) 100%
+        ) !important;
+    }
+
+    /* Dim mode - silver */
+    html[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"],
+    body[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"] {
+      background: linear-gradient(180deg, rgba(40, 45, 55, 1) 0%, rgba(32, 38, 48, 1) 100%) !important;
+      border-color: rgba(140, 140, 155, 0.35) !important;
+      box-shadow:
+        0 0 2px rgba(200, 200, 220, 0.25),
+        0 0 10px rgba(160, 160, 180, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        inset 0 0 18px rgba(180, 180, 200, 0.06) !important;
+    }
+
+    html[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"]::before,
+    body[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"]::before {
+      background:
+        linear-gradient(
+          135deg,
+          rgba(200, 200, 220, 0.08) 0%,
+          rgba(160, 160, 180, 0.03) 25%,
+          rgba(255, 255, 255, 0) 50%,
+          rgba(160, 160, 180, 0.03) 75%,
+          rgba(200, 200, 220, 0.06) 100%
+        ) !important;
+    }
+
+    /* Enhanced gold for posts user has liked - 8% more gold */
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"] {
+      border-color: rgba(212, 175, 55, 0.4) !important;
+      box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.06),
+        0 4px 14px rgba(212, 175, 55, 0.15),
+        inset 0 1px 0 rgba(255, 215, 0, 0.15) !important;
+    }
+
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"]::before {
+      background:
+        linear-gradient(
+          135deg,
+          rgba(212, 175, 55, 0.16) 0%,
+          rgba(255, 223, 100, 0.24) 15%,
+          rgba(255, 255, 255, 0) 40%,
+          rgba(212, 175, 55, 0.08) 65%,
+          rgba(255, 215, 0, 0.2) 85%,
+          rgba(184, 134, 11, 0.12) 100%
+        ) !important;
+    }
+
+    /* Light mode liked */
+    html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"],
+    body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"] {
+      background: linear-gradient(180deg, rgba(255, 248, 225, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
+      box-shadow:
+        0 2px 4px rgba(184, 134, 11, 0.1),
+        0 4px 14px rgba(212, 175, 55, 0.15),
+        inset 0 1px 0 rgba(255, 223, 100, 0.35) !important;
+    }
+
+    /* Dark mode liked */
+    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"],
+    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"] {
+      background: linear-gradient(180deg, rgba(65, 52, 28, 1) 0%, rgba(50, 40, 20, 1) 100%) !important;
+      border-color: rgba(212, 175, 55, 0.45) !important;
+    }
+
+    /* Dim mode liked */
+    html[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"],
+    body[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"] {
+      background: linear-gradient(180deg, rgba(60, 50, 32, 1) 0%, rgba(48, 40, 25, 1) 100%) !important;
+      border-color: rgba(212, 175, 55, 0.45) !important;
     }
 
     /* Add spacing between milady user cells */
@@ -1022,6 +1244,109 @@ function injectStyles(): void {
       color: #1a1a1a !important;
     }
 
+    /* ===== PROFILE PAGE STYLING ===== */
+
+    /* Gold rim around milady profile avatar */
+    [data-miladymaxxer-profile="milady"] a[href*="/photo"] img[src*="profile_images"] {
+      border: 3px solid #d4af37 !important;
+      box-shadow: 0 0 12px rgba(212, 175, 55, 0.5) !important;
+    }
+
+    /* Profile card - light mode */
+    [data-miladymaxxer-profile="milady"] > div > div > div:has(a[href$="/header_photo"]) {
+      border: 1px solid rgba(212, 175, 55, 0.3) !important;
+      border-radius: 12px !important;
+      margin: 8px 4px !important;
+      box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.06),
+        0 4px 12px rgba(212, 175, 55, 0.1),
+        inset 0 1px 0 rgba(255, 215, 0, 0.1) !important;
+      overflow: hidden !important;
+      background: rgba(255, 252, 240, 1) !important;
+    }
+
+    /* Force transparent backgrounds on profile children to prevent white seams */
+    [data-miladymaxxer-profile="milady"] [data-testid="UserName"],
+    [data-miladymaxxer-profile="milady"] [data-testid="UserDescription"],
+    [data-miladymaxxer-profile="milady"] [data-testid="UserProfileHeader_Items"],
+    [data-miladymaxxer-profile="milady"] [data-testid="UserName"] *,
+    [data-miladymaxxer-profile="milady"] [data-testid="UserDescription"] *,
+    [data-miladymaxxer-profile="milady"] [data-testid="UserProfileHeader_Items"] * {
+      background: transparent !important;
+      background-color: transparent !important;
+    }
+
+    /* Dark mode profile card */
+    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-profile="milady"] > div > div > div:has(a[href$="/header_photo"]),
+    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-profile="milady"] > div > div > div:has(a[href$="/header_photo"]) {
+      background: rgba(45, 36, 20, 1) !important;
+      border-color: rgba(212, 175, 55, 0.5) !important;
+      box-shadow:
+        0 0 3px rgba(255, 215, 0, 0.4),
+        0 0 16px rgba(212, 175, 55, 0.25),
+        inset 0 1px 0 rgba(255, 215, 0, 0.15) !important;
+    }
+
+    /* Gold Follow back button on profile pages */
+    [data-miladymaxxer-profile="milady"] [aria-label*="Follow back"],
+    [data-miladymaxxer-profile="milady"] button[aria-label*="Follow back"] {
+      background: linear-gradient(135deg, #d4af37 0%, #f0c850 50%, #d4af37 100%) !important;
+      background-size: 200% 200% !important;
+      animation: milady-shimmer 3s ease-in-out infinite !important;
+      border: 1px solid rgba(184, 134, 11, 0.5) !important;
+      color: #1a1a1a !important;
+      font-weight: 700 !important;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+      box-shadow:
+        0 2px 8px rgba(212, 175, 55, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+      transition: all 0.2s ease !important;
+    }
+
+    [data-miladymaxxer-profile="milady"] [aria-label*="Follow back"]:hover,
+    [data-miladymaxxer-profile="milady"] button[aria-label*="Follow back"]:hover {
+      transform: scale(1.05) !important;
+      box-shadow:
+        0 4px 16px rgba(212, 175, 55, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+    }
+
+    [data-miladymaxxer-profile="milady"] [aria-label*="Follow back"] span {
+      color: #1a1a1a !important;
+    }
+
+    /* Silver Follow button on profile pages (they don't follow you) */
+    [data-miladymaxxer-profile="milady"] [data-testid$="-follow"]:not([aria-label*="back"]):not([aria-label*="Following"]),
+    [data-miladymaxxer-profile="milady"] button[aria-label="Follow"] {
+      background: linear-gradient(135deg, #a8a8a8 0%, #d0d0d0 50%, #a8a8a8 100%) !important;
+      background-size: 200% 200% !important;
+      border: 1px solid rgba(128, 128, 128, 0.5) !important;
+      color: #1a1a1a !important;
+      font-weight: 700 !important;
+      box-shadow:
+        0 2px 6px rgba(100, 100, 100, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+      transition: all 0.2s ease !important;
+    }
+
+    [data-miladymaxxer-profile="milady"] [data-testid$="-follow"]:not([aria-label*="back"]):not([aria-label*="Following"]):hover,
+    [data-miladymaxxer-profile="milady"] button[aria-label="Follow"]:hover {
+      transform: scale(1.05) !important;
+      box-shadow:
+        0 4px 12px rgba(100, 100, 100, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+    }
+
+    /* "You might like" section - add spacing between user cells */
+    [data-miladymaxxer-effect="milady"][data-testid="UserCell"],
+    [data-miladymaxxer-effect="milady"][data-testid="user-cell"] {
+      margin: 4px 4px 8px 4px !important;
+      padding: 8px !important;
+      border-radius: 12px !important;
+    }
+
+    /* ===== END PROFILE PAGE STYLING ===== */
+
     /* Milady reply after non-milady - seamless top edge */
     [data-milady-fade-in="true"] {
       border-top: none !important;
@@ -1073,7 +1398,13 @@ function injectStyles(): void {
       z-index: 3 !important;
     }
 
-    /* Gold metallic sheen overlay */
+    /* Content sits above the overlays */
+    [data-miladymaxxer-effect="milady"] > * {
+      position: relative !important;
+      z-index: 5 !important;
+    }
+
+    /* Gold metallic sheen overlay - behind content */
     [data-miladymaxxer-effect="milady"]::before {
       content: "" !important;
       position: absolute !important;
@@ -1092,7 +1423,7 @@ function injectStyles(): void {
       z-index: 1 !important;
     }
 
-    /* Shimmer effect overlay */
+    /* Shimmer effect overlay - behind content */
     [data-miladymaxxer-effect="milady"]::after {
       content: "" !important;
       position: absolute !important;
@@ -1109,7 +1440,7 @@ function injectStyles(): void {
       background-size: 200% 100% !important;
       animation: milady-shimmer 6s ease-in-out infinite !important;
       pointer-events: none !important;
-      z-index: 2 !important;
+      z-index: 1 !important;
     }
 
     /* Light mode - gold sheen */
@@ -1156,26 +1487,26 @@ function injectStyles(): void {
         inset 0 1px 0 rgba(255, 223, 100, 0.3) !important;
     }
 
-    /* Twitter Dim mode (dark blue) - subtle gold accent */
+    /* Twitter Dim mode (dark blue) - warm gold accent */
     html[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"],
     body[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"] {
-      background: rgba(25, 38, 52, 1) !important;
-      border-color: rgba(212, 175, 55, 0.25) !important;
+      background: linear-gradient(180deg, rgba(55, 46, 30, 1) 0%, rgba(42, 35, 22, 1) 100%) !important;
+      border-color: rgba(212, 175, 55, 0.35) !important;
       box-shadow:
-        0 0 1px rgba(255, 215, 0, 0.2),
-        0 0 8px rgba(212, 175, 55, 0.12),
-        inset 0 1px 0 rgba(255, 215, 0, 0.1) !important;
+        0 2px 4px rgba(0, 0, 0, 0.15),
+        0 4px 12px rgba(212, 175, 55, 0.12),
+        inset 0 1px 0 rgba(255, 215, 0, 0.15) !important;
     }
 
-    /* Twitter Dark mode (black) - subtle gold accent */
+    /* Twitter Dark mode (black) - warm gold accent */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"] {
-      background: rgba(22, 22, 24, 1) !important;
-      border-color: rgba(212, 175, 55, 0.25) !important;
+      background: linear-gradient(180deg, rgba(60, 48, 25, 1) 0%, rgba(45, 36, 18, 1) 100%) !important;
+      border-color: rgba(212, 175, 55, 0.35) !important;
       box-shadow:
-        0 0 1px rgba(255, 215, 0, 0.2),
-        0 0 8px rgba(212, 175, 55, 0.1),
-        inset 0 1px 0 rgba(255, 215, 0, 0.08) !important;
+        0 2px 4px rgba(0, 0, 0, 0.2),
+        0 4px 12px rgba(212, 175, 55, 0.1),
+        inset 0 1px 0 rgba(255, 215, 0, 0.12) !important;
     }
 
     /* Gold metallic sheen - dim mode */
@@ -1184,25 +1515,25 @@ function injectStyles(): void {
       background:
         linear-gradient(
           135deg,
-          rgba(255, 215, 0, 0.12) 0%,
-          rgba(212, 175, 55, 0.04) 25%,
-          rgba(255, 255, 255, 0) 50%,
-          rgba(212, 175, 55, 0.03) 75%,
-          rgba(255, 215, 0, 0.1) 100%
+          rgba(255, 215, 0, 0.25) 0%,
+          rgba(212, 175, 55, 0.12) 25%,
+          rgba(255, 255, 255, 0.02) 50%,
+          rgba(212, 175, 55, 0.1) 75%,
+          rgba(255, 215, 0, 0.22) 100%
         ) !important;
     }
 
-    /* Gold metallic sheen - dark mode (subtle) */
+    /* Gold metallic sheen - dark mode */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"]::before,
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"]::before {
       background:
         linear-gradient(
           135deg,
-          rgba(255, 215, 0, 0.06) 0%,
-          rgba(212, 175, 55, 0.02) 25%,
-          rgba(255, 255, 255, 0) 50%,
-          rgba(212, 175, 55, 0.02) 75%,
-          rgba(255, 215, 0, 0.05) 100%
+          rgba(255, 215, 0, 0.22) 0%,
+          rgba(212, 175, 55, 0.1) 25%,
+          rgba(255, 255, 255, 0.02) 50%,
+          rgba(212, 175, 55, 0.08) 75%,
+          rgba(255, 215, 0, 0.2) 100%
         ) !important;
     }
 
@@ -1232,7 +1563,7 @@ function injectStyles(): void {
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"] [data-testid="Tweet-User-Avatar"],
     html[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"] [data-testid="Tweet-User-Avatar"],
     body[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"] [data-testid="Tweet-User-Avatar"] {
-      filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.15)) !important;
+      filter: drop-shadow(0 0 6px rgba(212, 175, 55, 0.3)) !important;
     }
 
     [data-miladymaxxer-effect="debug-match"] {
@@ -1315,13 +1646,15 @@ function injectStyles(): void {
 
 function observeStorage(): void {
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === "sync" && (changes.mode || changes.whitelistHandles)) {
+    if (area === "sync" && (changes.mode || changes.whitelistHandles || changes.soundEnabled)) {
       const nextMode = changes.mode?.newValue;
+      const nextSoundEnabled = changes.soundEnabled?.newValue;
       settings = {
         mode: isFilterMode(nextMode) ? nextMode : settings.mode,
         whitelistHandles: normalizeWhitelistHandles(
           changes.whitelistHandles?.newValue ?? settings.whitelistHandles,
         ),
+        soundEnabled: typeof nextSoundEnabled === "boolean" ? nextSoundEnabled : settings.soundEnabled,
       };
       scheduleProcessVisibleTweets();
     }
