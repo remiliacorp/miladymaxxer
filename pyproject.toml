@@ -1,0 +1,9 @@
+[project]
+name = "milady-shrinkifier"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=2.3.3",
+  "onnx>=1.19.1",
+  "pillow>=12.0.0"
+]

@@ -1,0 +1,31 @@
+{
+  "name": "milady-shrinkifier",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "download:images": "tsx scripts/download-images.ts",
+    "download:images:aria2": "zsh scripts/download-images-aria2.sh",
+    "generate:hashes": "tsx scripts/generate-hashes.ts",
+    "generate:model": "uv run python scripts/build_prototype_model.py",
+    "prepare:assets": "pnpm run download:images && pnpm run generate:hashes && pnpm run generate:model",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "onnxruntime-web": "^1.24.3"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.29",
+    "@types/node": "^24.10.1",
+    "jsdom": "^27.2.0",
+    "sharp": "^0.34.5",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.3",
+    "vite-plugin-static-copy": "^3.1.4",
+    "vitest": "^4.1.2"
+  }
+}

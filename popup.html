@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Milady Shrinkifier</title>
+    <script type="module" src="/src/popup.ts"></script>
+  </head>
+  <body>
+    <main class="popup">
+      <h1>Milady Shrinkifier</h1>
+      <p class="lede">Filter posts from accounts using a Milady Maker avatar.</p>
+      <form id="mode-form" class="mode-form">
+        <label><input type="radio" name="mode" value="off" /> Off</label>
+        <label><input type="radio" name="mode" value="hide" /> Hide posts</label>
+        <label><input type="radio" name="mode" value="scale" /> Scale to 50%</label>
+        <label><input type="radio" name="mode" value="fade" /> Fade to 50%</label>
+      </form>
+      <p class="footnote">Detection runs locally from a generated Milady Maker reference set.</p>
+    </main>
+  </body>
+</html>
