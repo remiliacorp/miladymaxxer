@@ -30,6 +30,7 @@
     "review:avatars": "sh -c 'if [ \"$1\" = \"--\" ]; then shift; fi; uv run python scripts/review_avatars.py \"$@\"' --",
     "score:classifier": "sh -c 'if [ \"$1\" = \"--\" ]; then shift; fi; uv run python scripts/score_avatar_catalog.py \"$@\"' --",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "train:classifier": "sh -c 'if [ \"$1\" = \"--\" ]; then shift; fi; uv run python scripts/train_classifier.py \"$@\"' --",
     "build:dataset": "sh -c 'if [ \"$1\" = \"--\" ]; then shift; fi; uv run python scripts/build_training_dataset.py \"$@\"' --",
     "typecheck": "tsc --noEmit"

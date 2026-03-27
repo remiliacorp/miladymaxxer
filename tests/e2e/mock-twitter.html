@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>X</title>
+  <style>
+    /* Approximate Twitter/X dark-mode styling so the page looks realistic */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: rgb(231, 233, 234);
+    }
+
+    /* Timeline container */
+    .timeline {
+      max-width: 600px;
+      margin: 0 auto;
+      border-left: 1px solid rgb(47, 51, 54);
+      border-right: 1px solid rgb(47, 51, 54);
+    }
+
+    /* Individual tweet cell */
+    [data-testid="cellInnerDiv"] {
+      border-bottom: 1px solid rgb(47, 51, 54);
+      padding: 12px 16px;
+    }
+
+    /* Tweet article layout */
+    article[data-testid="tweet"] {
+      display: flex;
+      gap: 12px;
+    }
+
+    /* Avatar column */
+    [data-testid="Tweet-User-Avatar"] {
+      flex-shrink: 0;
+      width: 40px;
+      height: 40px;
+    }
+
+    [data-testid="Tweet-User-Avatar"] a {
+      display: block;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      overflow: hidden;
+    }
+
+    [data-testid="Tweet-User-Avatar"] img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Tweet body */
+    .tweet-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* User-Name row */
+    [data-testid="User-Name"] {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 4px;
+    }
+
+    [data-testid="User-Name"] span {
+      font-size: 15px;
+    }
+
+    [data-testid="User-Name"] .display-name {
+      font-weight: 700;
+    }
+
+    [data-testid="User-Name"] .handle {
+      color: rgb(113, 118, 123);
+    }
+
+    /* Tweet text */
+    [data-testid="tweetText"] {
+      font-size: 15px;
+      line-height: 1.4;
+      margin-bottom: 12px;
+    }
+
+    /* Action bar */
+    .actions {
+      display: flex;
+      gap: 48px;
+      color: rgb(113, 118, 123);
+    }
+
+    .actions button {
+      background: none;
+      border: none;
+      color: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      padding: 0;
+    }
+
+    .actions button svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* UserCell (search results / who-to-follow) */
+    [data-testid="UserCell"] {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgb(47, 51, 54);
+    }
+
+    [data-testid="UserCell"] img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+    }
+
+    /* Primary column wrapper */
+    [data-testid="primaryColumn"] {
+      min-height: 100vh;
+    }
+  </style>
+  <script>
+    // Match Twitter's dark background color that the content script expects
+    document.documentElement.style.backgroundColor = "rgb(0, 0, 0)";
+  </script>
+</head>
+<body>
+  <div data-testid="primaryColumn">
+    <div class="timeline">
+
+      <!-- ============================================================== -->
+      <!-- Tweet 1: has a profile_images avatar (content script will find) -->
+      <!-- ============================================================== -->
+      <div data-testid="cellInnerDiv">
+        <article data-testid="tweet">
+          <div data-testid="Tweet-User-Avatar">
+            <a href="/milady_poster" role="link">
+              <img
+                src="https://pbs.twimg.com/profile_images/0001/avatar_normal.jpg"
+                alt="@milady_poster"
+                draggable="true"
+                width="40"
+                height="40"
+              />
+            </a>
+          </div>
+          <div class="tweet-body">
+            <div data-testid="User-Name">
+              <a role="link" href="/milady_poster">
+                <span class="display-name">Milady Poster</span>
+              </a>
+              <span class="handle">@milady_poster</span>
+            </div>
+            <div data-testid="tweetText">
+              gm frens, another beautiful day to be milady
+            </div>
+            <div class="actions">
+              <button data-testid="reply">
+                <svg viewBox="0 0 24 24"><path d="M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.25-.893 4.306-2.394 5.82l-5.72 5.77a.749.749 0 01-1.275-.533V18.5H9.756c-4.421 0-8.005-3.58-8.005-8z" fill="currentColor"/></svg>
+                <span>4</span>
+              </button>
+              <button data-testid="retweet">
+                <svg viewBox="0 0 24 24"><path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z" fill="currentColor"/></svg>
+                <span>2</span>
+              </button>
+              <button data-testid="like">
+                <svg viewBox="0 0 24 24"><path d="M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.56-1.13-1.666-1.84-2.908-1.91z" fill="currentColor"/></svg>
+                <span>12</span>
+              </button>
+              <button data-testid="unlike" style="display: none;">
+                <svg viewBox="0 0 24 24"><path d="M20.884 13.19c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.45-4.55-.78-6.04C3.016 5.65 4.566 4.78 6.25 4.71c1.735-.08 3.597.7 5.252 2.95.328.445.41.41.248.17l.5.68.5-.68c1.655-2.25 3.517-3.03 5.252-2.95 1.684.07 3.234.94 3.916 2.44.669 1.49.579 3.54-.78 6.04z" fill="currentColor"/></svg>
+                <span>12</span>
+              </button>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- ============================================================== -->
+      <!-- Tweet 2: different user with profile_images avatar             -->
+      <!-- ============================================================== -->
+      <div data-testid="cellInnerDiv">
+        <article data-testid="tweet">
+          <div data-testid="Tweet-User-Avatar">
+            <a href="/normie_poster" role="link">
+              <img
+                src="https://pbs.twimg.com/profile_images/0002/avatar_normal.jpg"
+                alt="@normie_poster"
+                draggable="true"
+                width="40"
+                height="40"
+              />
+            </a>
+          </div>
+          <div class="tweet-body">
+            <div data-testid="User-Name">
+              <a role="link" href="/normie_poster">
+                <span class="display-name">Normal Person</span>
+              </a>
+              <span class="handle">@normie_poster</span>
+            </div>
+            <div data-testid="tweetText">
+              Just a normal tweet about normal things.
+            </div>
+            <div class="actions">
+              <button data-testid="reply">
+                <svg viewBox="0 0 24 24"><path d="M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.25-.893 4.306-2.394 5.82l-5.72 5.77a.749.749 0 01-1.275-.533V18.5H9.756c-4.421 0-8.005-3.58-8.005-8z" fill="currentColor"/></svg>
+                <span>1</span>
+              </button>
+              <button data-testid="retweet">
+                <svg viewBox="0 0 24 24"><path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z" fill="currentColor"/></svg>
+                <span>0</span>
+              </button>
+              <button data-testid="like">
+                <svg viewBox="0 0 24 24"><path d="M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.56-1.13-1.666-1.84-2.908-1.91z" fill="currentColor"/></svg>
+                <span>3</span>
+              </button>
+              <button data-testid="unlike" style="display: none;">
+                <svg viewBox="0 0 24 24"><path d="M20.884 13.19c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.45-4.55-.78-6.04C3.016 5.65 4.566 4.78 6.25 4.71c1.735-.08 3.597.7 5.252 2.95.328.445.41.41.248.17l.5.68.5-.68c1.655-2.25 3.517-3.03 5.252-2.95 1.684.07 3.234.94 3.916 2.44.669 1.49.579 3.54-.78 6.04z" fill="currentColor"/></svg>
+                <span>3</span>
+              </button>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- ============================================================== -->
+      <!-- Tweet 3: a third user for variety                              -->
+      <!-- ============================================================== -->
+      <div data-testid="cellInnerDiv">
+        <article data-testid="tweet">
+          <div data-testid="Tweet-User-Avatar">
+            <a href="/crypto_chad" role="link">
+              <img
+                src="https://pbs.twimg.com/profile_images/0003/avatar_normal.jpg"
+                alt="@crypto_chad"
+                draggable="true"
+                width="40"
+                height="40"
+              />
+            </a>
+          </div>
+          <div class="tweet-body">
+            <div data-testid="User-Name">
+              <a role="link" href="/crypto_chad">
+                <span class="display-name">Crypto Chad</span>
+              </a>
+              <span class="handle">@crypto_chad</span>
+            </div>
+            <div data-testid="tweetText">
+              we are so back
+            </div>
+            <div class="actions">
+              <button data-testid="reply">
+                <svg viewBox="0 0 24 24"><path d="M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.25-.893 4.306-2.394 5.82l-5.72 5.77a.749.749 0 01-1.275-.533V18.5H9.756c-4.421 0-8.005-3.58-8.005-8z" fill="currentColor"/></svg>
+                <span>7</span>
+              </button>
+              <button data-testid="retweet">
+                <svg viewBox="0 0 24 24"><path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z" fill="currentColor"/></svg>
+                <span>5</span>
+              </button>
+              <button data-testid="like">
+                <svg viewBox="0 0 24 24"><path d="M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.56-1.13-1.666-1.84-2.908-1.91z" fill="currentColor"/></svg>
+                <span>42</span>
+              </button>
+              <button data-testid="unlike" style="display: none;">
+                <svg viewBox="0 0 24 24"><path d="M20.884 13.19c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.45-4.55-.78-6.04C3.016 5.65 4.566 4.78 6.25 4.71c1.735-.08 3.597.7 5.252 2.95.328.445.41.41.248.17l.5.68.5-.68c1.655-2.25 3.517-3.03 5.252-2.95 1.684.07 3.234.94 3.916 2.44.669 1.49.579 3.54-.78 6.04z" fill="currentColor"/></svg>
+                <span>42</span>
+              </button>
+            </div>
+          </div>
+        </article>
+      </div>
+
+    </div><!-- /.timeline -->
+
+    <!-- ================================================================ -->
+    <!-- UserCell: appears in "Who to follow" sidebar / search results    -->
+    <!-- ================================================================ -->
+    <div data-testid="UserCell">
+      <img
+        src="https://pbs.twimg.com/profile_images/0004/avatar_normal.jpg"
+        alt="@sidebar_user"
+        width="40"
+        height="40"
+      />
+      <div>
+        <div data-testid="User-Name">
+          <a role="link" href="/sidebar_user">
+            <span class="display-name">Sidebar User</span>
+          </a>
+          <span class="handle">@sidebar_user</span>
+        </div>
+        <span style="color: rgb(113, 118, 123); font-size: 13px;">Followed by people you follow</span>
+      </div>
+    </div>
+
+  </div><!-- /[data-testid="primaryColumn"] -->
+</body>
+</html>
