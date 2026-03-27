@@ -7,12 +7,8 @@ export function injectStyles(): void {
   const style = document.createElement("style");
   style.id = STYLE_ID;
   style.textContent = `
-    /* Diminish effect - tighter margins, only fade content */
+    /* Diminish effect - subtle shrink, no margin changes to prevent layout shift */
     [data-miladymaxxer-effect="diminish"] {
-      margin-top: -4px !important;
-      margin-bottom: -4px !important;
-      padding-top: 8px !important;
-      padding-bottom: 8px !important;
       transform: scale(0.98) !important;
       transform-origin: center center !important;
     }
@@ -74,19 +70,27 @@ export function injectStyles(): void {
       position: relative !important;
       z-index: 1 !important;
       border-radius: 12px !important;
-      margin: 8px 4px !important;
+      margin: 2px 0 !important;
       border: 1px solid rgba(212, 175, 55, 0.4) !important;
       box-shadow:
         0 4px 8px rgba(0, 0, 0, 0.1),
         0 8px 24px rgba(212, 175, 55, 0.2),
         inset 0 1px 0 rgba(255, 215, 0, 0.15) !important;
-      transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+      transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.4s ease, border-color 0.4s ease !important;
+    }
+
+    /* Subtle centered float on hover */
+    [data-miladymaxxer-effect="milady"]:hover {
+      transform: translateY(-1px) scale(1.003) !important;
+      box-shadow:
+        0 6px 14px rgba(0, 0, 0, 0.1),
+        0 10px 26px rgba(212, 175, 55, 0.2),
+        inset 0 1px 0 rgba(255, 215, 0, 0.15) !important;
     }
 
     /* Connected milady tweets - merge adjacent cards */
     [data-miladymaxxer-effect="milady"] + [data-miladymaxxer-effect="milady"],
     [data-miladymaxxer-effect="milady"] + [data-miladymaxxer-effect="diminish"] + [data-miladymaxxer-effect="milady"] {
-      margin-top: -7px !important;
       border-top-left-radius: 0 !important;
       border-top-right-radius: 0 !important;
       border-top: none !important;
@@ -95,7 +99,6 @@ export function injectStyles(): void {
     [data-miladymaxxer-effect="milady"]:has(+ [data-miladymaxxer-effect="milady"]) {
       border-bottom-left-radius: 0 !important;
       border-bottom-right-radius: 0 !important;
-      margin-bottom: 0 !important;
     }
 
 
@@ -199,15 +202,14 @@ export function injectStyles(): void {
         ) !important;
     }
 
-    /* Dark mode - dark silver card */
+    /* Dark mode - rich silver card */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"] {
-      background: rgb(5, 6, 8) !important;
-      border: 1.5px solid rgba(170, 175, 190, 0.3) !important;
+      background: linear-gradient(180deg, rgb(20, 22, 30) 0%, rgb(14, 16, 22) 100%) !important;
+      border: 1px solid rgba(120, 125, 150, 0.3) !important;
       box-shadow:
-        0 0 1px rgba(180, 185, 200, 0.4),
-        0 0 6px rgba(160, 165, 180, 0.08),
-        inset 0 1px 0 rgba(200, 205, 220, 0.06) !important;
+        0 4px 14px rgba(120, 125, 150, 0.06),
+        inset 0 1px 0 rgba(160, 165, 185, 0.1) !important;
     }
 
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"]::before,
@@ -245,26 +247,25 @@ export function injectStyles(): void {
         ) !important;
     }
 
-    /* Light mode liked - subtly deeper gold (~20% richer than base) */
+    /* Light mode liked - ~30% richer than base */
     html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"],
     body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"] {
-      background: linear-gradient(180deg, rgba(255, 247, 215, 1) 0%, rgba(255, 253, 240, 1) 100%) !important;
-      border-color: rgba(212, 175, 55, 0.4) !important;
+      background: linear-gradient(180deg, rgba(255, 243, 200, 1) 0%, rgba(255, 250, 230, 1) 100%) !important;
+      border-color: rgba(200, 160, 50, 0.45) !important;
       box-shadow:
-        0 2px 4px rgba(184, 134, 11, 0.1),
-        0 4px 14px rgba(212, 175, 55, 0.15),
-        inset 0 1px 0 rgba(255, 223, 100, 0.35) !important;
+        0 2px 6px rgba(184, 134, 11, 0.12),
+        0 4px 16px rgba(212, 175, 55, 0.18),
+        inset 0 1px 0 rgba(255, 223, 100, 0.4) !important;
     }
 
-    /* Dark mode liked - slightly warmer with gold edge */
+    /* Dark mode liked - subtly richer than base */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"] {
-      background: linear-gradient(180deg, rgb(28, 23, 10) 0%, rgb(20, 16, 7) 100%) !important;
-      border-color: rgba(180, 145, 50, 0.45) !important;
+      background: linear-gradient(180deg, rgb(34, 28, 12) 0%, rgb(26, 21, 9) 100%) !important;
+      border-color: rgba(170, 138, 48, 0.4) !important;
       box-shadow:
-        0 4px 20px rgba(180, 145, 50, 0.18),
-        0 8px 35px rgba(140, 110, 35, 0.1),
-        inset 0 1px 0 rgba(212, 175, 55, 0.15) !important;
+        0 4px 16px rgba(150, 120, 42, 0.08),
+        inset 0 1px 0 rgba(200, 165, 60, 0.12) !important;
     }
 
     /* Add spacing between milady user cells */
@@ -360,11 +361,11 @@ export function injectStyles(): void {
     /* Dark mode profile card */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-profile="milady"] > div > div > div:has(a[href$="/header_photo"]),
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-profile="milady"] > div > div > div:has(a[href$="/header_photo"]) {
-      background: linear-gradient(180deg, rgb(18, 15, 8) 0%, rgb(12, 10, 5) 100%) !important;
-      border-color: rgba(160, 130, 50, 0.35) !important;
+      background: linear-gradient(180deg, rgb(28, 23, 10) 0%, rgb(20, 16, 7) 100%) !important;
+      border-color: rgba(160, 130, 45, 0.35) !important;
       box-shadow:
-        0 4px 16px rgba(180, 145, 50, 0.12),
-        inset 0 1px 0 rgba(200, 165, 60, 0.08) !important;
+        0 4px 14px rgba(140, 112, 40, 0.06),
+        inset 0 1px 0 rgba(180, 145, 55, 0.1) !important;
     }
 
     /* Gold Follow back button on profile pages */
@@ -495,11 +496,11 @@ export function injectStyles(): void {
     /* Dark mode milady quote tweets */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-quote="milady"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-quote="milady"] {
-      background: rgb(16, 13, 7) !important;
-      border-color: rgba(160, 130, 50, 0.3) !important;
+      background: rgb(24, 20, 9) !important;
+      border-color: rgba(150, 120, 42, 0.3) !important;
       box-shadow:
-        0 2px 8px rgba(140, 110, 35, 0.1),
-        inset 0 1px 0 rgba(200, 165, 60, 0.06) !important;
+        0 2px 8px rgba(130, 105, 35, 0.08),
+        inset 0 1px 0 rgba(180, 145, 55, 0.08) !important;
     }
 
     /* ===== NON-MILADY QUOTE TWEETS - Neutral styling, no gold ===== */
@@ -594,12 +595,11 @@ export function injectStyles(): void {
     /* Dark mode fallback */
     @media (prefers-color-scheme: dark) {
       [data-miladymaxxer-effect="milady"] {
-        background: linear-gradient(180deg, rgb(18, 15, 8) 0%, rgb(12, 10, 5) 100%) !important;
-        border-color: rgba(160, 130, 50, 0.3) !important;
+        background: linear-gradient(180deg, rgb(28, 23, 10) 0%, rgb(20, 16, 7) 100%) !important;
+        border-color: rgba(160, 130, 45, 0.35) !important;
         box-shadow:
-          0 4px 16px rgba(180, 145, 50, 0.1),
-          0 8px 30px rgba(140, 110, 35, 0.05),
-          inset 0 1px 0 rgba(200, 165, 60, 0.08) !important;
+          0 4px 14px rgba(140, 112, 40, 0.06),
+          inset 0 1px 0 rgba(180, 145, 55, 0.1) !important;
       }
     }
 
@@ -615,15 +615,14 @@ export function injectStyles(): void {
     }
 
 
-    /* Twitter Dark mode (black) - dark gold card */
+    /* Twitter Dark mode (black) - gold card */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"] {
-      background: linear-gradient(180deg, rgb(18, 15, 8) 0%, rgb(12, 10, 5) 100%) !important;
-      border: 1px solid rgba(160, 130, 50, 0.35) !important;
+      background: linear-gradient(180deg, rgb(28, 23, 10) 0%, rgb(20, 16, 7) 100%) !important;
+      border: 1px solid rgba(160, 130, 45, 0.35) !important;
       box-shadow:
-        0 4px 16px rgba(180, 145, 50, 0.12),
-        0 8px 30px rgba(140, 110, 35, 0.06),
-        inset 0 1px 0 rgba(200, 165, 60, 0.1) !important;
+        0 4px 14px rgba(140, 112, 40, 0.06),
+        inset 0 1px 0 rgba(180, 145, 55, 0.1) !important;
     }
 
 

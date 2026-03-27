@@ -1,3 +1,17 @@
+import {
+  MEDIA_ELEMENTS,
+  INTERACTIVE_ELEMENT,
+  POST_BUTTONS,
+  TWEET_COMPOSER,
+  DM_CONTAINER,
+  DM_CONVERSATION_PANEL,
+  DM_MESSAGE_LIST,
+  DM_MESSAGE,
+  DM_COMPOSER,
+  DM_COMPOSER_FORM,
+  DM_REACTIONS,
+  LAYERS,
+} from "./selectors";
 import type { ExtensionSettings } from "./shared/types";
 
 // Module-level settings reference, updated by content.ts via setSoundSettings()
@@ -141,22 +155,38 @@ export function attachSoundEvents(tweet: HTMLElement): void {
     if (settings.mode !== "off") {
       const target = e.target as HTMLElement;
       // Only play on interactive elements
-      if (target.closest("a, button, [role='button'], [data-testid]")) {
+      if (target.closest(INTERACTIVE_ELEMENT)) {
         playClickSound(isMilady());
       }
     }
   }, { passive: true });
 
   // Media hover sounds
-  const mediaElements = tweet.querySelectorAll<HTMLElement>(
-    '[data-testid="tweetPhoto"], [data-testid="videoPlayer"], [data-testid="card.wrapper"]'
-  );
+  const mediaElements = tweet.querySelectorAll<HTMLElement>(MEDIA_ELEMENTS);
   for (const media of Array.from(mediaElements)) {
     if (soundsAttached.has(media)) continue;
     soundsAttached.add(media);
     media.addEventListener("mouseenter", () => {
       if (settings.mode !== "off") {
         playMediaHoverSound(isMilady());
+      }
+    }, { passive: true });
+  }
+}
+
+// Global media hover sounds — attaches a subtle pip to ALL media on the page,
+// regardless of whether the tweet was processed by the milady detection system.
+export function attachGlobalMediaHoverSounds(): void {
+  if (settings.mode === "off") return;
+
+  const mediaElements = document.querySelectorAll<HTMLElement>(MEDIA_ELEMENTS);
+  for (const media of Array.from(mediaElements)) {
+    if (soundsAttached.has(media)) continue;
+    soundsAttached.add(media);
+    media.addEventListener("mouseenter", () => {
+      if (settings.mode !== "off" && settings.soundEnabled) {
+        // Very subtle, short pip — quieter and shorter than the milady media hover
+        playTone(500, 0.05, "sine", 0.02);
       }
     }, { passive: true });
   }
@@ -173,9 +203,7 @@ export function attachPostButtonSound(): void {
   if (settings.mode === "off") return;
 
   // Regular tweet buttons
-  const postButtons = document.querySelectorAll<HTMLElement>(
-    '[data-testid="tweetButton"], [data-testid="tweetButtonInline"]'
-  );
+  const postButtons = document.querySelectorAll<HTMLElement>(POST_BUTTONS);
 
   for (const button of Array.from(postButtons)) {
     if (soundsAttached.has(button)) continue;
@@ -199,15 +227,22 @@ export function attachDMSounds(): void {
     if (settings.mode === "off") return;
 
     const target = e.target as HTMLElement;
-
-    // Find the button that was clicked (might be the target or an ancestor)
     const button = target.closest("button") as HTMLElement | null;
 
-    // Check for send button
+    // Check for send button (inside dm-composer-form or by aria-label)
     if (button) {
       const testId = button.getAttribute("data-testid") || "";
       const ariaLabel = button.getAttribute("aria-label") || "";
 
+      // DM send: button inside the composer form, or explicit send labels
+      const inComposerForm = button.closest(DM_COMPOSER_FORM);
+      if (inComposerForm && (testId.includes("send") || ariaLabel.includes("Send") ||
+          button.getAttribute("type") === "submit")) {
+        playSendSound();
+        return;
+      }
+
+      // Also catch any send button by testid/aria-label outside composer
       if (testId.includes("send") || testId.includes("Send") ||
           ariaLabel.includes("Send") || ariaLabel === "Send") {
         playSendSound();
@@ -216,10 +251,9 @@ export function attachDMSounds(): void {
     }
 
     // Check for emoji/reaction in popup layers
-    const inLayers = target.closest("#layers");
+    const inLayers = target.closest(LAYERS);
     if (inLayers && button) {
       const ariaLabel = button.getAttribute("aria-label") || "";
-      // Check if aria-label is a single emoji or starts with emoji
       if (/^[\p{Emoji}\u200d]+$/u.test(ariaLabel) ||
           /^[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u.test(ariaLabel)) {
         playReactionSound();
@@ -227,40 +261,48 @@ export function attachDMSounds(): void {
       }
     }
 
-    // Check for DM conversation click
-    const dmConv = target.closest('[data-testid="conversation"]') ||
-                   target.closest('[data-testid="cellInnerDiv"]');
-    if (dmConv && window.location.pathname.includes("/messages")) {
+    // Check for DM conversation panel click
+    const dmPanel = target.closest(DM_CONVERSATION_PANEL) || target.closest(DM_CONTAINER);
+    if (dmPanel && window.location.pathname.includes("/messages")) {
       playClickSound(false);
     }
   }, { passive: true, capture: true });
 
-  // Document-level keydown for Enter to send
+  // Document-level keydown for Enter to send in DM composer
   document.addEventListener("keydown", (e) => {
     if (settings.mode === "off") return;
     if (e.key !== "Enter" || e.shiftKey) return;
 
     const target = e.target as HTMLElement;
+    const testId = target.getAttribute("data-testid") || "";
 
-    // Check if in DM composer
+    // Direct match: dm-composer-textarea
+    if (testId === "dm-composer-textarea") {
+      playSendSound();
+      return;
+    }
+
+    // Fallback: any textbox inside DM page that isn't the tweet composer
     const inDMPage = window.location.pathname.includes("/messages");
     const isTextbox = target.getAttribute("role") === "textbox" || target.isContentEditable;
-    const notTweetComposer = !target.closest('[data-testid="tweetTextarea_0"]');
+    const notTweetComposer = !target.closest(TWEET_COMPOSER);
 
     if (inDMPage && isTextbox && notTweetComposer) {
       playSendSound();
     }
   }, { passive: true, capture: true });
 
-  // Document-level mouseover for DM hover sounds
+  // Document-level mouseover for DM conversation hover sounds
   document.addEventListener("mouseover", (e) => {
     if (settings.mode === "off") return;
 
     const target = e.target as HTMLElement;
-    const dmConv = target.closest('[data-testid="conversation"]');
+    // Hover on conversation panel or any DM message
+    const dmElement = target.closest(DM_CONVERSATION_PANEL) ||
+                      target.closest(DM_MESSAGE);
 
-    if (dmConv && !soundsAttached.has(dmConv as HTMLElement)) {
-      soundsAttached.add(dmConv as HTMLElement);
+    if (dmElement && !soundsAttached.has(dmElement as HTMLElement)) {
+      soundsAttached.add(dmElement as HTMLElement);
       playTone(600, 0.06, "sine", 0.03);
     }
   }, { passive: true });
@@ -269,30 +311,25 @@ export function attachDMSounds(): void {
 
 // Observe incoming messages and reactions in DMs/GCs
 export function observeIncomingMessages(): void {
-  const conversationContainer = document.querySelector(
-    '[data-testid="DmActivityViewport"], [data-testid="DMDrawer"], [data-testid="conversation"], [aria-label*="Direct message"], [aria-label*="Conversation"]'
-  );
+  // Find the message list in the active conversation
+  const messageList = document.querySelector(DM_MESSAGE_LIST) ||
+                      document.querySelector(DM_CONVERSATION_PANEL);
 
-  if (!conversationContainer) {
+  if (!messageList) {
     lastMessageCount = 0;
     lastReactionCount = 0;
     return;
   }
 
-  // Count messages
-  const messages = conversationContainer.querySelectorAll(
-    '[data-testid="messageEntry"], [data-testid="cellInnerDiv"] [dir="auto"]'
-  );
-
+  // Count messages (each message has data-testid="message-{uuid}")
+  const messages = messageList.querySelectorAll(DM_MESSAGE);
   const currentCount = messages.length;
 
   // Count reactions (emoji reactions on messages)
-  const reactions = conversationContainer.querySelectorAll(
-    '[data-testid="messageReactions"], [aria-label*="reaction"], [aria-label*="Reaction"]'
-  );
+  const reactions = messageList.querySelectorAll(DM_REACTIONS);
   const currentReactionCount = reactions.length;
 
-  // Play sound for new messages
+  // Play sound for new messages (only after initial count is established)
   if (currentCount > lastMessageCount && lastMessageCount > 0 && document.hasFocus()) {
     playMessageBlip();
   }

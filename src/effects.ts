@@ -1,4 +1,17 @@
 import { parseCount } from "./shared/parse-count";
+import {
+  TWEET,
+  CELL_INNER_DIV,
+  TWEET_USER_AVATAR,
+  LIKE_BUTTON,
+  LIKE_COUNT,
+  UNLIKE_BUTTON,
+  UNFOLLOW_BUTTON,
+  FOLLOW_BUTTON,
+  FOLLOWING_INDICATOR,
+  FOLLOWS_YOU_INDICATOR,
+  THREAD_CONNECTOR,
+} from "./selectors";
 import type { ExtensionSettings } from "./shared/types";
 
 // ---------------------------------------------------------------------------
@@ -26,22 +39,20 @@ const countedLikes = new WeakSet<HTMLElement>();
 // ---------------------------------------------------------------------------
 
 function findPreviousArticle(tweet: HTMLElement): HTMLElement | null {
-  const container = tweet.closest('[data-testid="cellInnerDiv"]');
+  const container = tweet.closest(CELL_INNER_DIV);
   if (!container) return null;
 
   // Check if this tweet is part of a reply thread by looking for the vertical connector line
   // These lines connect replies to their parent and have specific background colors per theme
-  const avatarArea = container.querySelector('[data-testid="Tweet-User-Avatar"]')?.parentElement?.parentElement;
-  const hasThreadConnector = avatarArea?.querySelector(
-    'div[style*="background-color: rgb(207, 217, 222)"], div[style*="background-color: rgb(56, 68, 77)"], div[style*="background-color: rgb(51, 54, 57)"]'
-  );
+  const avatarArea = container.querySelector(TWEET_USER_AVATAR)?.parentElement?.parentElement;
+  const hasThreadConnector = avatarArea?.querySelector(THREAD_CONNECTOR);
 
   if (!hasThreadConnector) return null;
 
   const prevContainer = container.previousElementSibling;
   if (!prevContainer) return null;
 
-  return prevContainer.querySelector<HTMLElement>('article[data-testid="tweet"]');
+  return prevContainer.querySelector<HTMLElement>(TWEET);
 }
 
 function applyDebugState(tweet: HTMLElement): void {
@@ -88,7 +99,7 @@ export function clearEffects(tweet: HTMLElement): void {
 }
 
 export function hasLowLikes(tweet: HTMLElement): boolean {
-  const likeButton = tweet.querySelector<HTMLElement>('[data-testid="like"]');
+  const likeButton = tweet.querySelector<HTMLElement>(LIKE_BUTTON);
   if (!likeButton) return false;
 
   // Check aria-label for like count
@@ -105,7 +116,7 @@ export function hasLowLikes(tweet: HTMLElement): boolean {
   }
 
   // Check for visible text count
-  const countSpan = likeButton.querySelector('span[data-testid="app-text-transition-container"]');
+  const countSpan = likeButton.querySelector(LIKE_COUNT);
   if (!countSpan) return true; // No count element means 0
 
   const countText = countSpan.textContent?.trim();
@@ -118,24 +129,24 @@ export function hasLowLikes(tweet: HTMLElement): boolean {
 
 export function hasUserLiked(tweet: HTMLElement): boolean {
   // If unlike button exists, user has liked this post
-  return !!tweet.querySelector<HTMLElement>('[data-testid="unlike"]');
+  return !!tweet.querySelector<HTMLElement>(UNLIKE_BUTTON);
 }
 
 export function doesUserFollow(tweet: HTMLElement): boolean {
   // Check for unfollow button - if it exists, user definitely follows them
-  const unfollowButton = tweet.querySelector<HTMLElement>('[data-testid$="-unfollow"]');
+  const unfollowButton = tweet.querySelector<HTMLElement>(UNFOLLOW_BUTTON);
   if (unfollowButton) {
     return true;
   }
 
   // Check for "Following" in any button aria-label
-  const followingButton = tweet.querySelector<HTMLElement>('[aria-label*="Following"]');
+  const followingButton = tweet.querySelector<HTMLElement>(FOLLOWING_INDICATOR);
   if (followingButton) {
     return true;
   }
 
   // Check for Follow button with specific aria-label pattern
-  const followButton = tweet.querySelector<HTMLElement>('[data-testid$="-follow"]');
+  const followButton = tweet.querySelector<HTMLElement>(FOLLOW_BUTTON);
   if (followButton) {
     const ariaLabel = followButton.getAttribute("aria-label") || "";
     // "Follow @username" means NOT following
@@ -149,7 +160,7 @@ export function doesUserFollow(tweet: HTMLElement): boolean {
   }
 
   // Check if there's a "Follows you" badge - they follow you but you might not follow back
-  const followsYou = tweet.querySelector('[data-testid="userFollowIndicator"]');
+  const followsYou = tweet.querySelector(FOLLOWS_YOU_INDICATOR);
   if (followsYou) {
     return false;
   }

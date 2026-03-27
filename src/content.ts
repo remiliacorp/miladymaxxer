@@ -26,10 +26,30 @@ import { detectAvatar } from "./detection";
 import { applyMode, clearEffects, revealed } from "./effects";
 import type { EffectsContext } from "./effects";
 import {
+  TWEET,
+  NOTIFICATION,
+  USER_CELL,
+  TWEET_USER_AVATAR,
+  TWEET_USER_AVATAR_LINK,
+  USER_NAME,
+  PROFILE_IMAGE,
+  QUOTE_TWEET,
+  STATUS_LINK,
+  NOTIFICATION_AVATAR_CONTAINER,
+  PROFILE_USER_NAME,
+  PROFILE_AVATAR,
+  PROFILE_HEADER_ITEMS,
+  PROFILE_CONTAINER_FALLBACK,
+  PRIMARY_COLUMN,
+  HOME_LINK,
+  LOGO_REPLACEMENT_CLASS,
+} from "./selectors";
+import {
   setSoundSettings,
   attachSoundEvents,
   attachPostButtonSound,
   attachDMSounds,
+  attachGlobalMediaHoverSounds,
   observeIncomingMessages,
 } from "./sounds";
 import { injectStyles } from "./styles";
@@ -38,9 +58,6 @@ import { injectStyles } from "./styles";
 // Constants
 // ---------------------------------------------------------------------------
 
-const ARTICLE_SELECTOR = 'article[data-testid="tweet"]';
-const NOTIFICATION_SELECTOR = 'article[data-testid="notification"]';
-const USER_CELL_SELECTOR = '[data-testid="UserCell"], [data-testid="user-cell"]';
 const RESCAN_INTERVAL_MS = 5000;
 
 // ---------------------------------------------------------------------------
@@ -97,6 +114,7 @@ async function boot(): Promise<void> {
       scheduleDelayedProcessVisibleTweets();
       attachPostButtonSound();
       attachDMSounds();
+      attachGlobalMediaHoverSounds();
       replaceXLogo();
       observeIncomingMessages();
     }, 150);
@@ -113,6 +131,7 @@ async function boot(): Promise<void> {
   scheduleDelayedProcessVisibleTweets();
   attachPostButtonSound();
   attachDMSounds();
+  attachGlobalMediaHoverSounds();
   replaceXLogo();
   observeIncomingMessages();
 }
@@ -143,9 +162,9 @@ function scheduleDelayedProcessVisibleTweets(): void {
 }
 
 async function processVisibleTweets(): Promise<void> {
-  const tweets = Array.from(document.querySelectorAll<HTMLElement>(ARTICLE_SELECTOR));
-  const notifications = Array.from(document.querySelectorAll<HTMLElement>(NOTIFICATION_SELECTOR));
-  const userCells = Array.from(document.querySelectorAll<HTMLElement>(USER_CELL_SELECTOR));
+  const tweets = Array.from(document.querySelectorAll<HTMLElement>(TWEET));
+  const notifications = Array.from(document.querySelectorAll<HTMLElement>(NOTIFICATION));
+  const userCells = Array.from(document.querySelectorAll<HTMLElement>(USER_CELL));
   await Promise.allSettled([
     ...tweets.map((tweet) => processTweet(tweet)),
     ...notifications.map((notification) => processNotificationGroup(notification)),
@@ -269,10 +288,10 @@ async function processTweet(tweet: HTMLElement): Promise<void> {
 const processedQuoteTweets = new WeakMap<HTMLElement, string>();
 
 async function processQuoteTweet(tweet: HTMLElement): Promise<void> {
-  const quoteTweet = tweet.querySelector<HTMLElement>('[data-testid="quoteTweet"]');
+  const quoteTweet = tweet.querySelector<HTMLElement>(QUOTE_TWEET);
   if (!quoteTweet) return;
 
-  const quoteAvatar = quoteTweet.querySelector<HTMLImageElement>('img[src*="profile_images"]');
+  const quoteAvatar = quoteTweet.querySelector<HTMLImageElement>(PROFILE_IMAGE);
   if (!quoteAvatar?.src) {
     quoteTweet.dataset.miladymaxxerQuote = "other";
     return;
@@ -302,16 +321,16 @@ async function processQuoteTweet(tweet: HTMLElement): Promise<void> {
 async function processProfilePage(): Promise<void> {
   if (settings.mode === "off") return;
 
-  const profileHeader = document.querySelector<HTMLElement>('[data-testid="primaryColumn"] [data-testid="UserName"]');
+  const profileHeader = document.querySelector<HTMLElement>(PROFILE_USER_NAME);
   if (!profileHeader) return;
 
-  const avatar = document.querySelector<HTMLImageElement>('[data-testid="primaryColumn"] a[href*="/photo"] img[src*="profile_images"]');
+  const avatar = document.querySelector<HTMLImageElement>(PROFILE_AVATAR);
   if (!avatar?.src) return;
 
   const normalizedUrl = normalizeProfileImageUrl(avatar.src);
 
-  const userProfileContainer = profileHeader.closest('[data-testid="UserProfileHeader_Items"]')?.parentElement?.parentElement ||
-                                profileHeader.closest('[data-testid="primaryColumn"] > div > div');
+  const userProfileContainer = profileHeader.closest(PROFILE_HEADER_ITEMS)?.parentElement?.parentElement ||
+                                profileHeader.closest(PROFILE_CONTAINER_FALLBACK);
   if (!userProfileContainer) return;
 
   if (processed.get(userProfileContainer as HTMLElement) === normalizedUrl) return;
@@ -323,7 +342,7 @@ async function processProfilePage(): Promise<void> {
       onAvatarChecked: () => incrementStat("avatarsChecked"),
       onError: () => incrementStat("errors"),
     });
-    const primaryColumn = document.querySelector<HTMLElement>('[data-testid="primaryColumn"]');
+    const primaryColumn = document.querySelector<HTMLElement>(PRIMARY_COLUMN);
     if (primaryColumn) {
       if (result.matched) {
         primaryColumn.dataset.miladymaxxerProfile = "milady";
@@ -332,7 +351,7 @@ async function processProfilePage(): Promise<void> {
       }
     }
   } catch {
-    const primaryColumn = document.querySelector<HTMLElement>('[data-testid="primaryColumn"]');
+    const primaryColumn = document.querySelector<HTMLElement>(PRIMARY_COLUMN);
     if (primaryColumn) {
       delete primaryColumn.dataset.miladymaxxerProfile;
     }
@@ -346,7 +365,7 @@ async function processProfilePage(): Promise<void> {
 async function processUserCell(cell: HTMLElement): Promise<void> {
   if (settings.mode === "off") return;
 
-  const avatar = cell.querySelector<HTMLImageElement>('img[src*="profile_images"]');
+  const avatar = cell.querySelector<HTMLImageElement>(PROFILE_IMAGE);
   if (!avatar?.src) return;
 
   const normalizedUrl = normalizeProfileImageUrl(avatar.src);
@@ -405,14 +424,14 @@ async function processNotificationGroup(notification: HTMLElement): Promise<void
 function replaceXLogo(): void {
   try {
     const logoUrl = chrome.runtime.getURL("milady-logo.png");
-    const homeLink = document.querySelector<HTMLAnchorElement>('h1 a[href="/home"]');
-    if (homeLink && !homeLink.querySelector(".milady-logo-replacement")) {
+    const homeLink = document.querySelector<HTMLAnchorElement>(HOME_LINK);
+    if (homeLink && !homeLink.querySelector(`.${LOGO_REPLACEMENT_CLASS}`)) {
       Array.from(homeLink.children).forEach(child => {
         (child as HTMLElement).style.display = "none";
       });
       const img = document.createElement("img");
       img.src = logoUrl;
-      img.className = "milady-logo-replacement";
+      img.className = LOGO_REPLACEMENT_CLASS;
       img.style.cssText = `
         width: 30px;
         height: 30px;
@@ -434,9 +453,9 @@ function replaceXLogo(): void {
 // ---------------------------------------------------------------------------
 
 function findAvatar(tweet: HTMLElement): HTMLImageElement | null {
-  const avatarContainer = tweet.querySelector<HTMLElement>('[data-testid="Tweet-User-Avatar"]');
+  const avatarContainer = tweet.querySelector<HTMLElement>(TWEET_USER_AVATAR);
   if (avatarContainer) {
-    const images = Array.from(avatarContainer.querySelectorAll<HTMLImageElement>('img[src*="profile_images"]'));
+    const images = Array.from(avatarContainer.querySelectorAll<HTMLImageElement>(PROFILE_IMAGE));
     if (images.length > 0) {
       return images.reduce((largest, img) => {
         const largestSize = (largest.naturalWidth || largest.width || 0) * (largest.naturalHeight || largest.height || 0);
@@ -445,17 +464,15 @@ function findAvatar(tweet: HTMLElement): HTMLImageElement | null {
       });
     }
   }
-  return tweet.querySelector<HTMLImageElement>('img[src*="profile_images"]');
+  return tweet.querySelector<HTMLImageElement>(PROFILE_IMAGE);
 }
 
 function findAuthor(tweet: HTMLElement): { handle: string; displayName: string | null } | null {
-  const avatarLink = tweet.querySelector<HTMLAnchorElement>(
-    '[data-testid="Tweet-User-Avatar"] a[href^="/"]',
-  );
+  const avatarLink = tweet.querySelector<HTMLAnchorElement>(TWEET_USER_AVATAR_LINK);
   const handle = normalizeHandle(avatarLink?.getAttribute("href"));
   if (!handle) return null;
 
-  const userName = tweet.querySelector<HTMLElement>('[data-testid="User-Name"]');
+  const userName = tweet.querySelector<HTMLElement>(USER_NAME);
   return {
     handle,
     displayName: userName ? extractDisplayName(userName) : null,
@@ -478,10 +495,10 @@ function collectNotificationAvatarEntries(notification: HTMLElement): Array<{
 }> {
   const results = new Map<string, { handle: string; normalizedUrl: string; originalUrl: string }>();
 
-  for (const container of Array.from(notification.querySelectorAll<HTMLElement>('[data-testid^="UserAvatar-Container-"]'))) {
+  for (const container of Array.from(notification.querySelectorAll<HTMLElement>(NOTIFICATION_AVATAR_CONTAINER))) {
     const testId = container.dataset.testid ?? "";
     const handle = normalizeHandle(testId.replace(/^UserAvatar-Container-/, ""));
-    const images = Array.from(container.querySelectorAll<HTMLImageElement>('img[src*="profile_images"]'));
+    const images = Array.from(container.querySelectorAll<HTMLImageElement>(PROFILE_IMAGE));
     const image = images.length > 0
       ? images.reduce((largest, img) => {
           const largestSize = (largest.naturalWidth || largest.width || 0) * (largest.naturalHeight || largest.height || 0);
@@ -500,7 +517,7 @@ function collectNotificationAvatarEntries(notification: HTMLElement): Array<{
 }
 
 function findTweetUrl(tweet: HTMLElement): string | null {
-  const link = tweet.querySelector<HTMLAnchorElement>('a[href*="/status/"]');
+  const link = tweet.querySelector<HTMLAnchorElement>(STATUS_LINK);
   return toAbsoluteUrl(link?.getAttribute("href"));
 }
 
