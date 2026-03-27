@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Milady Shrinkifier",
-  "version": "0.2.2",
-  "description": "Detects Milady avatars on your X timeline using an on-device classifier.",
+  "name": "Miladymaxxer",
+  "version": "0.3.0",
+  "description": "Elevate milady. Diminish the rest. On-device avatar detection for X.",
   "permissions": ["storage", "unlimitedStorage"],
   "host_permissions": ["https://x.com/*", "https://twitter.com/*"],
   "action": {
@@ -17,7 +17,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["worker.js", "ort/*", "generated/*", "models/*"],
+      "resources": ["worker.js", "ort/*", "generated/*", "models/*", "milady-logo.png"],
       "matches": ["https://x.com/*", "https://twitter.com/*"]
     }
   ]
