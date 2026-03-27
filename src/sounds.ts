@@ -313,34 +313,37 @@ export function attachDMSounds(): void {
 
 
 // Poll for new DM messages by tracking seen message UUIDs.
-// MutationObserver doesn't reliably survive Twitter's React re-renders,
-// so we poll on a 2s interval instead.
+// Self-starting: runs a global 2s interval that checks if we're on a DM page.
 const seenMessageIds = new Set<string>();
-let dmPollTimer: ReturnType<typeof setInterval> | null = null;
+let dmPollStarted = false;
+let wasInDMs = false;
 
 export function observeIncomingMessages(): void {
-  const inDMs = window.location.pathname.includes("/messages") ||
-                window.location.pathname.includes("/i/chat");
+  if (dmPollStarted) return;
+  dmPollStarted = true;
 
-  if (!inDMs) {
-    if (dmPollTimer) {
-      clearInterval(dmPollTimer);
-      dmPollTimer = null;
-      seenMessageIds.clear();
+  setInterval(() => {
+    const inDMs = window.location.pathname.includes("/messages") ||
+                  window.location.pathname.includes("/i/chat");
+
+    if (!inDMs) {
+      if (wasInDMs) {
+        seenMessageIds.clear();
+        wasInDMs = false;
+      }
+      return;
     }
-    return;
-  }
 
-  // Already polling
-  if (dmPollTimer) return;
+    if (!wasInDMs) {
+      // Just entered DMs — seed with all visible message IDs
+      wasInDMs = true;
+      for (const msg of Array.from(document.querySelectorAll(DM_MESSAGE))) {
+        const id = msg.getAttribute("data-testid");
+        if (id) seenMessageIds.add(id);
+      }
+      return;
+    }
 
-  // Seed with all currently visible message IDs
-  for (const msg of Array.from(document.querySelectorAll(DM_MESSAGE))) {
-    const id = msg.getAttribute("data-testid");
-    if (id) seenMessageIds.add(id);
-  }
-
-  dmPollTimer = setInterval(() => {
     if (!settings.soundEnabled || settings.mode === "off") return;
     if (!document.hasFocus()) return;
 
