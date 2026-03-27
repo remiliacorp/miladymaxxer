@@ -219,18 +219,30 @@ const styles = `
   }
 
   .mode-dot {
-    width: 12px;
-    height: 12px;
-    margin-top: 4px;
+    position: relative;
+    display: block;
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
     border: 1px solid rgba(247, 241, 232, 0.34);
     border-radius: 999px;
-    flex: 0 0 auto;
+    flex: 0 0 18px;
+  }
+
+  .mode-dot::after {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border-radius: 999px;
+    background: transparent;
   }
 
   .mode-row[data-active="true"] .mode-dot {
     border-color: var(--accent);
+  }
+
+  .mode-row[data-active="true"] .mode-dot::after {
     background: var(--accent);
-    box-shadow: 0 0 0 3px rgba(255, 109, 74, 0.16);
   }
 
   .mode-label {

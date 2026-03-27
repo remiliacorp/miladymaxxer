@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Milady Shrinkifier",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "Detects Milady avatars on your X timeline using an on-device classifier.",
   "permissions": ["storage", "unlimitedStorage"],
   "host_permissions": ["https://x.com/*", "https://twitter.com/*"],
