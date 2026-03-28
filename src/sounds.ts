@@ -127,6 +127,7 @@ function playClickSound(isMilady: boolean): void {
 
 function playSendSound(): void {
   if (!settings.soundEnabled) return;
+  lastUserInteraction = Date.now();
   // Thup - tight percussive tap, no resonance
   playTone(250, 0.025, "square", 0.06, 0, 0.005);
 }
@@ -254,22 +255,7 @@ export function attachDMSounds(): void {
       }
     }
 
-    // Skip reaction/emoji buttons — no sound for react picker
-    if (button) {
-      const ariaLabel = button.getAttribute("aria-label") || "";
-      if (/react|emoji|like/i.test(ariaLabel) ||
-          /^[\p{Emoji}\u200d]+$/u.test(ariaLabel) ||
-          /^[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u.test(ariaLabel) ||
-          target.closest(LAYERS)) {
-        return;
-      }
-    }
-    const inDMs = window.location.pathname.includes("/messages") ||
-                  window.location.pathname.includes("/i/chat");
-    const dmPanel = target.closest(DM_CONVERSATION_PANEL) || target.closest(DM_CONTAINER);
-    if (dmPanel && inDMs) {
-      playClickSound(false);
-    }
+    // No click sounds in DM conversations — too noisy
   }, { passive: true, capture: true });
 
   // Document-level keydown for Enter to send in DM composer
@@ -330,11 +316,11 @@ export function observeIncomingMessages(): void {
   if (dmPollStarted) return;
   dmPollStarted = true;
 
-  // Track user interactions to suppress false pips
-  const markInteraction = () => { lastUserInteraction = Date.now(); };
-  document.addEventListener("click", markInteraction, { passive: true, capture: true });
-  document.addEventListener("keydown", markInteraction, { passive: true, capture: true });
-  document.addEventListener("scroll", markInteraction, { passive: true, capture: true });
+  // Track sends to suppress false pips (Twitter re-renders on send create new UUIDs)
+  const markSend = () => { lastUserInteraction = Date.now(); };
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) markSend();
+  }, { passive: true, capture: true });
 
   setInterval(() => {
     const inDMs = window.location.pathname.includes("/messages") ||
