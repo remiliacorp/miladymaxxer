@@ -1,8 +1,6 @@
 import {
   CLASSIFIER_MODEL_METADATA_URL,
   CLASSIFIER_MODEL_URL,
-  LEGACY_MODEL_METADATA_URL,
-  LEGACY_MODEL_URL,
 } from "./shared/constants";
 import {
   loadCorsImage,
@@ -24,7 +22,6 @@ interface ResolvedModel {
   metadata: ModelMetadata;
   modelUrl: string;
   positiveIndex: number;
-  kind: "classifier" | "legacy";
 }
 
 export interface DetectionCallbacks {
@@ -88,7 +85,6 @@ async function detectAvatarUncached(
     const score = await scoreWithOnnx(
       resolvedModel,
       variants.map((entry) => entry.modelTensor),
-      variants.map((entry) => entry.legacyFeatures),
       normalizedUrl,
     );
     return {
@@ -113,48 +109,21 @@ async function detectAvatarUncached(
 
 async function loadModelMetadata(): Promise<ResolvedModel> {
   if (!modelMetadataPromise) {
-    modelMetadataPromise = resolveModel(
-      CLASSIFIER_MODEL_METADATA_URL,
-      CLASSIFIER_MODEL_URL,
-      "classifier",
-      LEGACY_MODEL_METADATA_URL,
-      LEGACY_MODEL_URL,
-    );
+    modelMetadataPromise = resolveModel();
   }
   return modelMetadataPromise;
 }
 
-async function resolveModel(
-  preferredMetadataUrl: string,
-  preferredModelUrl: string,
-  preferredKind: ResolvedModel["kind"],
-  fallbackMetadataUrl: string,
-  fallbackModelUrl: string,
-): Promise<ResolvedModel> {
-  const preferredResponse = await fetch(chrome.runtime.getURL(preferredMetadataUrl));
-  if (preferredResponse.ok) {
-    const metadata = await preferredResponse.json() as ModelMetadata;
-    return {
-      metadata,
-      modelUrl: chrome.runtime.getURL(preferredModelUrl),
-      positiveIndex: typeof metadata.positiveIndex === "number" ? metadata.positiveIndex : 1,
-      kind: preferredKind,
-    };
+async function resolveModel(): Promise<ResolvedModel> {
+  const response = await fetch(chrome.runtime.getURL(CLASSIFIER_MODEL_METADATA_URL));
+  if (!response.ok) {
+    throw new Error(`Failed to load model metadata: ${response.status}`);
   }
-
-  const fallbackResponse = await fetch(chrome.runtime.getURL(fallbackMetadataUrl));
-  if (!fallbackResponse.ok) {
-    throw new Error(
-      `Failed to load model metadata: preferred ${preferredResponse.status}, fallback ${fallbackResponse.status}`,
-    );
-  }
-
-  const metadata = await fallbackResponse.json() as ModelMetadata;
+  const metadata = await response.json() as ModelMetadata;
   return {
     metadata,
-    modelUrl: chrome.runtime.getURL(fallbackModelUrl),
-    positiveIndex: typeof metadata.positiveIndex === "number" ? metadata.positiveIndex : 0,
-    kind: "legacy",
+    modelUrl: chrome.runtime.getURL(CLASSIFIER_MODEL_URL),
+    positiveIndex: typeof metadata.positiveIndex === "number" ? metadata.positiveIndex : 1,
   };
 }
 
@@ -201,27 +170,20 @@ async function getWorker(resolvedModel: ResolvedModel): Promise<Worker> {
 async function scoreWithOnnx(
   resolvedModel: ResolvedModel,
   tensors: number[][],
-  legacyFeatures: number[][],
   seed: string,
 ): Promise<number> {
   const worker = await getWorker(resolvedModel);
   const scores = await Promise.all(
-    (resolvedModel.kind === "classifier" ? tensors : legacyFeatures).map(
+    tensors.map(
       (input, index) =>
         new Promise<number>((resolve, reject) => {
           const id = `${seed}:${index}:${crypto.randomUUID()}`;
           pendingWorker.set(id, { resolve, reject });
-          const payload: WorkerRequest =
-            resolvedModel.kind === "classifier"
-              ? {
-                id,
-                tensor: input,
-                shape: [1, 3, 128, 128],
-              }
-              : {
-                id,
-                features: input,
-              };
+          const payload: WorkerRequest = {
+            id,
+            tensor: input,
+            shape: [1, 3, 128, 128],
+          };
           worker.postMessage(payload);
         }),
     ),

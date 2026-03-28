@@ -71,9 +71,8 @@ export interface DetectionResult {
 
 export interface WorkerRequest {
   id: string;
-  features?: number[];
-  tensor?: number[];
-  shape?: [number, number, number, number];
+  tensor: number[];
+  shape: [number, number, number, number];
 }
 
 export interface WorkerResponse {

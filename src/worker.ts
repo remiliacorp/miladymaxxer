@@ -43,13 +43,7 @@ async function handleInferenceRequest(data: WorkerRequest): Promise<void> {
   }
 
   const session = await sessionPromise;
-  const tensorData = data.tensor ?? data.features;
-  const shape = data.shape ?? (data.features ? [1, data.features.length] : null);
-  if (!tensorData || !shape) {
-    throw new Error("Worker received no tensor payload");
-  }
-
-  const tensor = new ort.Tensor("float32", Float32Array.from(tensorData), shape);
+  const tensor = new ort.Tensor("float32", Float32Array.from(data.tensor), data.shape);
   const outputName = session.outputNames[0];
   const result = await session.run({
     input: tensor,

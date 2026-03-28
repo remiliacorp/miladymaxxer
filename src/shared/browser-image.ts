@@ -27,16 +27,6 @@ export async function computeBrowserImageFeatures(
   image: HTMLImageElement,
   variant: CropVariant = "center",
 ): Promise<RuntimeImageFeatures> {
-  const featureCanvas = document.createElement("canvas");
-  featureCanvas.width = 32;
-  featureCanvas.height = 32;
-  const featureContext = featureCanvas.getContext("2d", { willReadFrequently: true });
-  if (!featureContext) {
-    throw new Error("Unable to create feature context");
-  }
-  drawCoverImage(featureContext, image, 32, 32, variant);
-  const modelPixels = featureContext.getImageData(0, 0, 32, 32).data;
-
   const classifierCanvas = document.createElement("canvas");
   classifierCanvas.width = CLASSIFIER_MODEL_INPUT_SIZE;
   classifierCanvas.height = CLASSIFIER_MODEL_INPUT_SIZE;
@@ -49,7 +39,6 @@ export async function computeBrowserImageFeatures(
     .getImageData(0, 0, CLASSIFIER_MODEL_INPUT_SIZE, CLASSIFIER_MODEL_INPUT_SIZE).data;
 
   return {
-    legacyFeatures: computeLegacyModelFeatures(modelPixels),
     modelTensor: computeClassifierTensor(classifierPixels),
     modelShape: [1, CLASSIFIER_MODEL_CHANNELS, CLASSIFIER_MODEL_INPUT_SIZE, CLASSIFIER_MODEL_INPUT_SIZE],
   };
@@ -72,15 +61,6 @@ function drawCoverImage(
 
   context.clearRect(0, 0, targetWidth, targetHeight);
   context.drawImage(image, offsetX, offsetY, scaledWidth, scaledHeight);
-}
-
-function computeLegacyModelFeatures(buffer: Uint8ClampedArray): number[] {
-  const features: number[] = [];
-  for (let offset = 0; offset < buffer.length; offset += 4) {
-    const gray = Math.round(buffer[offset] * 0.299 + buffer[offset + 1] * 0.587 + buffer[offset + 2] * 0.114);
-    features.push(gray / 255);
-  }
-  return features;
 }
 
 function computeClassifierTensor(buffer: Uint8ClampedArray): number[] {
