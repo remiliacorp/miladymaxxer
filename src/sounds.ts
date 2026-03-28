@@ -370,5 +370,5 @@ export function observeIncomingMessages(): void {
     if (hasNew) {
       playMessageBlip();
     }
-  }, 500);
+  }, 250);
 }
