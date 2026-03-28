@@ -22,11 +22,10 @@
     "debug:extension:extension-profile": "node scripts/debug-extension.mjs --system-profile-name Extension",
     "debug:extension:seed-extension-profile": "node scripts/debug-extension.mjs --seed-from-system-profile-name Extension",
     "download:avatars": "sh -c 'if [ \"$1\" = \"--\" ]; then shift; fi; uv run python scripts/download_avatar_catalog.py \"$@\"' --",
-    "generate:model": "uv run python scripts/build_prototype_model.py",
     "export:classifier": "sh -c 'if [ \"$1\" = \"--\" ]; then shift; fi; uv run python scripts/export_classifier_onnx.py \"$@\"' --",
     "ingest:avatars": "sh -c 'if [ \"$1\" = \"--\" ]; then shift; fi; uv run python scripts/ingest_avatar_exports.py \"$@\"' --",
     "label:heuristic": "sh -c 'if [ \"$1\" = \"--\" ]; then shift; fi; uv run python scripts/label_heuristic_matches.py \"$@\"' --",
-    "prepare:assets": "pnpm run download:images && pnpm run generate:model",
+    "prepare:assets": "pnpm run download:images",
     "review:avatars": "sh -c 'if [ \"$1\" = \"--\" ]; then shift; fi; uv run python scripts/review_avatars.py \"$@\"' --",
     "score:classifier": "sh -c 'if [ \"$1\" = \"--\" ]; then shift; fi; uv run python scripts/score_avatar_catalog.py \"$@\"' --",
     "test": "vitest run",
@@ -40,6 +39,7 @@
     "solid-js": "^1.9.12"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@types/chrome": "^0.1.29",
     "@types/node": "^24.10.1",
     "esbuild": "^0.27.0",

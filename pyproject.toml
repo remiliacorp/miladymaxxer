@@ -1,6 +1,10 @@
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
 [project]
 name = "milady-shrinkifier"
-version = "0.2.2"
+version = "0.4.0"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.121.1",
@@ -9,8 +13,15 @@ dependencies = [
   "onnx>=1.19.1",
   "onnxscript>=0.6.2",
   "pillow>=12.0.0",
+  "scikit-learn>=1.8.0",
   "torch>=2.9.0",
   "torchvision>=0.24.0",
   "uvicorn>=0.38.0",
   "wandb>=0.25.1",
 ]
+
+[project.scripts]
+milady = "milady.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["milady"]
