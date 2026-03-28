@@ -12,7 +12,7 @@ import {
 import type { ExtensionSettings } from "./shared/types";
 
 // Module-level settings reference, updated by content.ts via setSoundSettings()
-let settings: ExtensionSettings = { mode: "off", whitelistHandles: [], soundEnabled: false };
+let settings: ExtensionSettings = { mode: "off", whitelistHandles: [], miladyListHandles: [], soundEnabled: false, showLevelBadge: true };
 
 export function setSoundSettings(next: ExtensionSettings): void {
   settings = next;
@@ -137,6 +137,23 @@ function playMessageBlip(): void {
   // Pip - audible high tap
   playTone(1200, 0.08, "sine", 0.15, 0, 0.02);
   setTimeout(() => playTone(1500, 0.06, "sine", 0.1, 0, 0.015), 30);
+}
+
+export function playCatchSound(): void {
+  if (!settings.soundEnabled) return;
+  // Bright, satisfying single catch tone — gold coin with sparkle
+  playTone(659.25, 0.15, "sine", 0.07); // E5
+  setTimeout(() => playTone(880, 0.2, "sine", 0.06), 60); // A5
+  setTimeout(() => playTone(1318.5, 0.25, "sine", 0.04), 140); // E6 sparkle
+}
+
+export function playLevelUpSound(): void {
+  if (!settings.soundEnabled) return;
+  // Ascending arpeggio — progression feel
+  playTone(523.25, 0.12, "sine", 0.06); // C5
+  setTimeout(() => playTone(659.25, 0.12, "sine", 0.06), 80); // E5
+  setTimeout(() => playTone(783.99, 0.12, "sine", 0.06), 160); // G5
+  setTimeout(() => playChord([1046.5, 1318.5], 0.3, 0.04), 240); // C6+E6 chord
 }
 
 function playMediaHoverSound(isMilady: boolean): void {

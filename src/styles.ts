@@ -65,12 +65,82 @@ export function injectStyles(): void {
       }
     }
 
+    @keyframes milady-catch-pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.6);
+      }
+      50% {
+        box-shadow: 0 0 20px 4px rgba(212, 175, 55, 0.4);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(212, 175, 55, 0);
+      }
+    }
+
+    @keyframes milady-levelup-pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7);
+      }
+      40% {
+        box-shadow: 0 0 24px 6px rgba(255, 215, 0, 0.5);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(255, 215, 0, 0);
+      }
+    }
+
+    [data-miladymaxxer-catch-anim="catch"] {
+      animation: milady-catch-pulse 0.5s ease-out !important;
+    }
+
+    [data-miladymaxxer-catch-anim="levelup"] {
+      animation: milady-levelup-pulse 0.6s ease-out !important;
+    }
+
+    .miladymaxxer-add-btn {
+      display: inline !important;
+      padding: 0 !important;
+      margin-left: 6px !important;
+      border: none !important;
+      background: transparent !important;
+      color: rgb(113, 118, 123) !important;
+      font: inherit !important;
+      font-weight: 400 !important;
+      cursor: pointer !important;
+      opacity: 0.3 !important;
+      transition: color 0.15s ease, opacity 0.15s ease !important;
+      vertical-align: baseline !important;
+    }
+
+    article:hover .miladymaxxer-add-btn {
+      opacity: 0.6 !important;
+    }
+
+    .miladymaxxer-add-btn:hover {
+      opacity: 1 !important;
+      color: #d4af37 !important;
+    }
+
+    .miladymaxxer-add-btn[data-milady-list-state="remove"]:hover {
+      color: rgb(244, 33, 46) !important;
+    }
+
+    .miladymaxxer-level-inline {
+      color: rgb(113, 118, 123) !important;
+      font: inherit !important;
+      white-space: nowrap !important;
+      margin-left: 4px !important;
+      display: inline !important;
+      position: relative !important;
+      top: -1px !important;
+    }
+
     /* MILADY effect - gold floating card with depth */
     [data-miladymaxxer-effect="milady"] {
       position: relative !important;
       z-index: 1 !important;
       border-radius: 12px !important;
-      margin: 4px 6px !important;
+      margin: 4px 0 !important;
       border: 1px solid rgba(212, 175, 55, 0.4) !important;
       box-shadow:
         0 4px 8px rgba(0, 0, 0, 0.1),
@@ -83,8 +153,8 @@ export function injectStyles(): void {
     [data-miladymaxxer-effect="milady"]:hover {
       transform: translateY(-1px) scale(1.003) !important;
       box-shadow:
-        0 6px 14px rgba(0, 0, 0, 0.1),
-        0 10px 26px rgba(212, 175, 55, 0.2),
+        0 4px 8px rgba(0, 0, 0, 0.12),
+        0 8px 24px rgba(212, 175, 55, 0.28),
         inset 0 1px 0 rgba(255, 215, 0, 0.15) !important;
     }
 
@@ -102,13 +172,7 @@ export function injectStyles(): void {
     }
 
 
-    /* Dotted grey underline on display name for miladys you don't follow */
-    [data-miladymaxxer-effect="milady"]:not([data-miladymaxxer-following="true"]) [data-testid="User-Name"] a[role="link"]:first-of-type {
-      text-decoration: underline dotted !important;
-      text-decoration-color: rgba(140, 140, 140, 0.7) !important;
-      text-underline-offset: 2px !important;
-      text-decoration-thickness: 1.5px !important;
-    }
+
 
     /* Faded pink heart and count on milady posts to encourage liking */
     [data-miladymaxxer-effect="milady"] [data-testid="like"] svg {
@@ -730,10 +794,12 @@ export function injectStyles(): void {
     @media (prefers-color-scheme: dark) {
       [data-miladymaxxer-effect="milady"] {
         background: linear-gradient(180deg, rgb(28, 23, 10) 0%, rgb(20, 16, 7) 100%) !important;
-        border-color: rgba(160, 130, 45, 0.35) !important;
+        border: 1px solid rgba(212, 175, 55, 0.4) !important;
+        margin: 4px 4px !important;
         box-shadow:
-          0 4px 14px rgba(140, 112, 40, 0.06),
-          inset 0 1px 0 rgba(180, 145, 55, 0.1) !important;
+          0 0 16px rgba(212, 175, 55, 0.25),
+          0 4px 24px rgba(212, 175, 55, 0.2),
+          inset 0 1px 0 rgba(255, 215, 0, 0.15) !important;
       }
     }
 
@@ -753,10 +819,12 @@ export function injectStyles(): void {
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"] {
       background: linear-gradient(180deg, rgb(28, 23, 10) 0%, rgb(20, 16, 7) 100%) !important;
-      border: 1px solid rgba(160, 130, 45, 0.35) !important;
+      border: 1px solid rgba(212, 175, 55, 0.4) !important;
+      margin: 4px 4px !important;
       box-shadow:
-        0 4px 14px rgba(140, 112, 40, 0.06),
-        inset 0 1px 0 rgba(180, 145, 55, 0.1) !important;
+        0 0 16px rgba(212, 175, 55, 0.25),
+        0 4px 24px rgba(212, 175, 55, 0.2),
+        inset 0 1px 0 rgba(255, 215, 0, 0.15) !important;
     }
 
 
