@@ -4,27 +4,41 @@
 
 ![hero](assets/hero.png)
 
-## What It Does
-
-On-device avatar detection for X/Twitter. A bundled ONNX classifier scans avatars as you scroll and applies visual effects:
-
-- **Milady mode** — Gold card effects with depth shadows, hover float animation, sound feedback
-- **Sound toggle** — Optional audio feedback: detection chimes, hover sounds, DM pips
-- **Off** — Disable all effects
+Chrome extension for X/Twitter. Runs a bundled ONNX classifier on avatars as you scroll. Milady posts get elevated, everything else gets diminished. Fully on-device — no server calls, no telemetry.
 
 ## Features
 
-- **Gold/silver cards** — Milady posts get gold-tinted floating cards; 0-like posts get silver to encourage engagement. Liking a post smoothly animates to richer gold.
-- **Dark mode optimized** — Warm gold and cool silver tinting with soft depth shadows (not neon glow). Liked posts visibly richer than base.
-- **Hover float** — Milady cards subtly lift and scale on hover
-- **Gold Follow buttons** — Shimmery gold "Follow back" for miladys who follow you, silver for those who don't
-- **Pink hearts** — Faded pink like button on milady posts to encourage engagement
-- **DM sounds** — Send thup, incoming message pip, conversation hover sounds
-- **User cell detection** — Works in "Who to follow" sections too
-- **Badge counter** — Shows milady posts liked this session
-- **Privacy-first** — Everything runs locally, no server calls, no telemetry
+**Visual effects**
+- Gold floating cards on milady posts, silver on 0-like posts
+- Smooth animated transition on like (silver → gold, gold → richer gold)
+- Hover float animation on milady cards
+- Gold shimmer overlay and metallic sheen
+- Gold "Follow back" / silver "Follow" buttons
+- Gold-rimmed profile avatars with HDR enhancement
+- Dotted underline on miladys you don't follow
+- Faded pink like button to encourage engagement
+- Hides downvote button on milady posts
+- Non-milady posts slightly shrunk and faded
+- Dark mode: warm gold / cool silver tinting with depth shadows
+- Light mode: subtle cream/champagne card tinting
+- Quote tweet detection — gold card when a milady is quoted
 
-The popup (styled with miladymaker.net's green palette) tracks session stats, keeps a list of detected accounts you can exempt individually, and collects avatar data you can export for offline labeling.
+**Sound**
+- Detection chime when milady avatars are found
+- Media hover pips, click feedback
+- DM send thup, incoming message pip
+- Toggle on/off in popup
+
+**Popup**
+- Session stats: posts scanned, match rate, last detection
+- Account list with per-account exemptions
+- Avatar dataset export for offline labeling
+- Green theme matching miladymaker.net
+
+**Other**
+- Badge counter for milady posts liked this session
+- Debug mode with detection scores and markers
+- Works in timelines, threads, profiles, "Who to follow", notifications
 
 ## Screenshots
 
@@ -34,39 +48,34 @@ The popup (styled with miladymaker.net's green palette) tracks session stats, ke
 
 ## Install
 
-There is no Chrome Web Store release. Install from GitHub Releases instead:
+No Chrome Web Store release. Install from source:
 
-1. Download the latest `miladymaxxer-vX.Y.Z-unpacked.zip` from Releases.
-2. Unzip it somewhere permanent on disk.
-3. Open `chrome://extensions`.
-4. Enable `Developer mode`.
-5. Click `Load unpacked`.
-6. Select the unzipped folder.
+1. Download latest `miladymaxxer-vX.Y.Z-unpacked.zip` from Releases
+2. Unzip somewhere permanent
+3. `chrome://extensions` → Developer mode → Load unpacked → select folder
 
 ## Development
 
-See `DEVELOPMENT.md` for debugging and training workflow commands.
-
 ```bash
-pnpm install      # Install dependencies
-pnpm run build    # Build extension
-pnpm run dev      # Watch mode
-pnpm test         # Run tests
+pnpm install      # deps
+pnpm run build    # build
+pnpm run dev      # watch
+pnpm test         # tests
 ```
+
+See `DEVELOPMENT.md` for model training and debugging workflows.
 
 ## Architecture
 
-The content script is split into focused modules:
+```
+src/
+  content.ts     # orchestrator — scroll observer, detection loop, stats
+  styles.ts      # injected CSS — cards, dark mode, hover, transitions
+  sounds.ts      # Web Audio API — chimes, DM sounds, hover pips
+  detection.ts   # ONNX inference and avatar classification
+  effects.ts     # DOM effects — milady/diminish, fade-ins, badges
+  selectors.ts   # centralized DOM selector constants
+  popup.tsx      # extension popup UI (Solid.js)
+```
 
-- `content.ts` — Orchestrator: scroll observer, avatar detection loop, stat tracking
-- `styles.ts` — All injected CSS (gold/silver cards, dark mode, hover, transitions)
-- `sounds.ts` — Web Audio API sound system (detection chimes, DM sounds, hover pips)
-- `detection.ts` — ONNX model inference and avatar classification
-- `effects.ts` — DOM manipulation (applying milady/diminish effects, fade-ins)
-- `selectors.ts` — Centralized DOM selector constants
-
-## Notes
-
-- Runtime model artifacts live in `public/models/` and `public/generated/`.
-- Training data lives under ignored `cache/`.
-- The extension runtime is ONNX-only.
+Model artifacts in `public/models/` and `public/generated/`. Training data in `cache/` (gitignored).
