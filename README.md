@@ -1,6 +1,6 @@
 # Miladymaxxer
 
-*elevate milady. diminish the rest.*
+*milady*
 
 ![Timeline](assets/screenshot-timeline-1.png)
 
@@ -9,9 +9,9 @@ Chrome extension for X/Twitter. Runs a bundled ONNX classifier on avatars as you
 ## Features
 
 **Tiered metallic cards**
-- Silver under 10 likes — encourages engagement
+- Silver under 10 likes
 - Gold above 10 likes
-- Diamond above 100 likes — icy crystalline shimmer
+- Diamond above 100 likes
 - Smooth animated transition between tiers on like
 - Hover float animation
 - Dark mode and light mode optimized
@@ -34,10 +34,9 @@ Chrome extension for X/Twitter. Runs a bundled ONNX classifier on avatars as you
 - Navigate to seen milady profiles from session
 - Per-account exemptions
 - Avatar dataset export for offline labeling
-- miladymaker.net green theme
 
 **Other**
-- All censorship filters removed
+- All censorship filters removed from banteg's original "milady-shrinkifier", making use of same milady detection model
 - Works in timelines, threads, profiles, "Who to follow", notifications, DMs
 - Debug mode with detection scores
 
