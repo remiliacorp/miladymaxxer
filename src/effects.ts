@@ -78,6 +78,7 @@ export function updateBadge(count: number): void {
 
 export function clearVisualState(tweet: HTMLElement): void {
   delete tweet.dataset.miladymaxxerEffect;
+  delete tweet.dataset.miladymaxxerDiamond;
   delete tweet.dataset.miladymaxxerNoLikes;
   delete tweet.dataset.miladymaxxerLiked;
   delete tweet.dataset.miladymaxxerFollowing;
@@ -125,6 +126,27 @@ export function hasLowLikes(tweet: HTMLElement): boolean {
   // Parse the count (handles "1.2K" etc)
   const count = parseCount(countText);
   return count < 10;
+}
+
+export function hasHighLikes(tweet: HTMLElement): boolean {
+  const likeButton = tweet.querySelector<HTMLElement>(LIKE_BUTTON);
+  if (!likeButton) return false;
+
+  const ariaLabel = likeButton.getAttribute("aria-label") || "";
+  if (ariaLabel === "Like" || ariaLabel === "Likes") return false;
+
+  const ariaMatch = ariaLabel.match(/^(\d[\d,.]*)\s/);
+  if (ariaMatch) {
+    return parseCount(ariaMatch[1].replace(/,/g, "")) >= 100;
+  }
+
+  const countSpan = likeButton.querySelector(LIKE_COUNT);
+  if (!countSpan) return false;
+
+  const countText = countSpan.textContent?.trim();
+  if (!countText) return false;
+
+  return parseCount(countText) >= 100;
 }
 
 export function hasUserLiked(tweet: HTMLElement): boolean {
@@ -218,7 +240,13 @@ export function applyMode(ctx: EffectsContext, tweet: HTMLElement, normalizedUrl
         } else {
           delete tweet.dataset.miladyFadeIn;
         }
-        // Check for 0 likes - tint silver to encourage engagement
+        // Check for 100+ likes - diamond tier
+        if (hasHighLikes(tweet)) {
+          tweet.dataset.miladymaxxerDiamond = "true";
+        } else {
+          delete tweet.dataset.miladymaxxerDiamond;
+        }
+        // Check for <10 likes - tint silver to encourage engagement
         if (hasLowLikes(tweet)) {
           tweet.dataset.miladymaxxerNoLikes = "true";
         } else {
