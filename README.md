@@ -2,7 +2,7 @@
 
 *elevate milady. diminish the rest.*
 
-![hero](assets/hero.png)
+![Timeline](assets/screenshot-timeline-1.png)
 
 Chrome extension for X/Twitter. Runs a bundled ONNX classifier on avatars as you scroll. Milady posts get elevated, everything else gets diminished. Fully on-device — no server calls, no telemetry.
 
@@ -42,9 +42,9 @@ Chrome extension for X/Twitter. Runs a bundled ONNX classifier on avatars as you
 
 ## Screenshots
 
-| Timeline | Follow Button |
-|----------|---------------|
-| ![Timeline](assets/screenshot-timeline-1.png) | ![Follow Button](assets/screenshot-follow-button.png) |
+| Timeline | Timeline (cont.) | Follow Button |
+|----------|-------------------|---------------|
+| ![Timeline](assets/screenshot-timeline-1.png) | ![Timeline 2](assets/screenshot-timeline-2.png) | ![Follow Button](assets/screenshot-follow-button.png) |
 
 ## Install
 
