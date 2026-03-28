@@ -45,6 +45,9 @@ export const QUOTE_TWEET = '[data-testid="quoteTweet"]';
 /** A link to a specific status (used to extract tweet URLs). */
 export const STATUS_LINK = 'a[href*="/status/"]';
 
+/** "Replying to @handle" link inside a reply tweet. */
+export const REPLY_TO_LINK = 'div[id^="id__"] a[href^="/"][role="link"]';
+
 // ---------------------------------------------------------------------------
 // Notification sub-elements
 // ---------------------------------------------------------------------------
@@ -156,6 +159,9 @@ export const PROFILE_CONTAINER_FALLBACK = '[data-testid="primaryColumn"] > div >
 // ---------------------------------------------------------------------------
 // Navigation / branding
 // ---------------------------------------------------------------------------
+
+/** The logged-in user's profile link in the sidebar nav. */
+export const SELF_PROFILE_LINK = '[data-testid="AppTabBar_Profile_Link"]';
 
 /** The X / Twitter logo home link. */
 export const HOME_LINK = 'h1 a[href="/home"]';
