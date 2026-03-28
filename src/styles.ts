@@ -275,9 +275,9 @@ export function injectStyles(): void {
       100% { background-position: 0% 50%; }
     }
 
-    @keyframes milady-diamond-sparkle {
-      0%, 100% { opacity: 0.4; }
-      50% { opacity: 1; }
+    @keyframes milady-diamond-streak {
+      0% { transform: translateX(-100%) skewX(-15deg); }
+      100% { transform: translateX(300%) skewX(-15deg); }
     }
 
     /* Diamond light mode */
@@ -308,6 +308,31 @@ export function injectStyles(): void {
       animation: milady-diamond-sparkle 3s ease-in-out infinite !important;
     }
 
+    /* Diamond light streak (::after) */
+    html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"]::after,
+    body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"]::after {
+      content: "" !important;
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      border-radius: inherit !important;
+      pointer-events: none !important;
+      z-index: 1 !important;
+      background: linear-gradient(
+        105deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0) 35%,
+        rgba(200, 220, 255, 0.5) 45%,
+        rgba(255, 255, 255, 0.8) 50%,
+        rgba(200, 220, 255, 0.5) 55%,
+        rgba(255, 255, 255, 0) 65%,
+        rgba(255, 255, 255, 0) 100%
+      ) !important;
+      animation: milady-diamond-streak 4s ease-in-out infinite !important;
+    }
+
     /* Diamond dark mode */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"] {
@@ -334,6 +359,31 @@ export function injectStyles(): void {
         rgba(80, 120, 200, 0.1) 100%
       ) !important;
       animation: milady-diamond-sparkle 3s ease-in-out infinite !important;
+    }
+
+    /* Diamond dark mode light streak */
+    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"]::after,
+    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"]::after {
+      content: "" !important;
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      border-radius: inherit !important;
+      pointer-events: none !important;
+      z-index: 1 !important;
+      background: linear-gradient(
+        105deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0) 35%,
+        rgba(120, 160, 240, 0.2) 45%,
+        rgba(180, 210, 255, 0.35) 50%,
+        rgba(120, 160, 240, 0.2) 55%,
+        rgba(255, 255, 255, 0) 65%,
+        rgba(255, 255, 255, 0) 100%
+      ) !important;
+      animation: milady-diamond-streak 4s ease-in-out infinite !important;
     }
 
     /* Diamond avatar glow */
