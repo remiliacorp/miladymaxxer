@@ -276,8 +276,11 @@ export function injectStyles(): void {
     }
 
     @keyframes milady-diamond-streak {
-      0% { transform: translateX(-100%) skewX(-15deg); }
-      100% { transform: translateX(300%) skewX(-15deg); }
+      0% { transform: translateX(-100%) skewX(-15deg); opacity: 0; }
+      3% { opacity: 1; }
+      25% { opacity: 1; }
+      30% { transform: translateX(300%) skewX(-15deg); opacity: 0; }
+      100% { transform: translateX(300%) skewX(-15deg); opacity: 0; }
     }
 
     /* Diamond light mode */
@@ -324,13 +327,13 @@ export function injectStyles(): void {
         105deg,
         rgba(255, 255, 255, 0) 0%,
         rgba(255, 255, 255, 0) 35%,
-        rgba(200, 220, 255, 0.5) 45%,
-        rgba(255, 255, 255, 0.8) 50%,
-        rgba(200, 220, 255, 0.5) 55%,
+        rgba(200, 220, 255, 0.25) 45%,
+        rgba(255, 255, 255, 0.4) 50%,
+        rgba(200, 220, 255, 0.25) 55%,
         rgba(255, 255, 255, 0) 65%,
         rgba(255, 255, 255, 0) 100%
       ) !important;
-      animation: milady-diamond-streak 4s ease-in-out infinite !important;
+      animation: milady-diamond-streak 8s ease-in-out infinite !important;
     }
 
     /* Diamond dark mode */
@@ -377,13 +380,13 @@ export function injectStyles(): void {
         105deg,
         rgba(255, 255, 255, 0) 0%,
         rgba(255, 255, 255, 0) 35%,
-        rgba(120, 160, 240, 0.2) 45%,
-        rgba(180, 210, 255, 0.35) 50%,
-        rgba(120, 160, 240, 0.2) 55%,
+        rgba(120, 160, 240, 0.1) 45%,
+        rgba(180, 210, 255, 0.18) 50%,
+        rgba(120, 160, 240, 0.1) 55%,
         rgba(255, 255, 255, 0) 65%,
         rgba(255, 255, 255, 0) 100%
       ) !important;
-      animation: milady-diamond-streak 4s ease-in-out infinite !important;
+      animation: milady-diamond-streak 8s ease-in-out infinite !important;
     }
 
     /* Diamond avatar glow */
