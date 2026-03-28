@@ -652,7 +652,7 @@ function mergeUniqueStrings(
 // ---------------------------------------------------------------------------
 
 function isFilterMode(value: unknown): value is ExtensionSettings["mode"] {
-  return value === "off" || value === "milady" || value === "debug";
+  return value === "off" || value === "milady" || value === "miladypro" || value === "debug";
 }
 
 function observeStorage(): void {

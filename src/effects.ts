@@ -264,6 +264,53 @@ export function applyMode(ctx: EffectsContext, tweet: HTMLElement, normalizedUrl
       delete tweet.dataset.miladymaxxerNoLikes;
       delete tweet.dataset.miladymaxxerLiked;
       return;
+    case "miladypro":
+      // Enhance milady posts, show non-milady posts normally
+      clearPlaceholder(tweet);
+      tweet.style.display = "";
+      if (isMatch) {
+        tweet.dataset.miladymaxxerEffect = "milady";
+        delete tweet.dataset.miladyFadeIn;
+        // Check for 100+ likes - diamond tier
+        if (hasHighLikes(tweet)) {
+          tweet.dataset.miladymaxxerDiamond = "true";
+        } else {
+          delete tweet.dataset.miladymaxxerDiamond;
+        }
+        // Check for <10 likes - tint silver to encourage engagement
+        if (hasLowLikes(tweet)) {
+          tweet.dataset.miladymaxxerNoLikes = "true";
+        } else {
+          delete tweet.dataset.miladymaxxerNoLikes;
+        }
+        // Check if user has liked - slightly more gold
+        if (hasUserLiked(tweet)) {
+          tweet.dataset.miladymaxxerLiked = "true";
+          if (!countedLikes.has(tweet)) {
+            countedLikes.add(tweet);
+            miladyLikesThisSession += 1;
+            updateBadge(miladyLikesThisSession);
+          }
+        } else {
+          delete tweet.dataset.miladymaxxerLiked;
+          if (countedLikes.has(tweet)) {
+            countedLikes.delete(tweet);
+            miladyLikesThisSession = Math.max(0, miladyLikesThisSession - 1);
+            updateBadge(miladyLikesThisSession);
+          }
+        }
+        // Check if user follows this milady
+        if (doesUserFollow(tweet)) {
+          tweet.dataset.miladymaxxerFollowing = "true";
+        } else {
+          delete tweet.dataset.miladymaxxerFollowing;
+        }
+        return;
+      }
+      delete tweet.dataset.miladyFadeIn;
+      delete tweet.dataset.miladymaxxerNoLikes;
+      delete tweet.dataset.miladymaxxerLiked;
+      return;
     case "debug":
       clearPlaceholder(tweet);
       applyDebugState(tweet);

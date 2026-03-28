@@ -84,7 +84,7 @@ export async function resetCollectedAvatars(): Promise<void> {
 }
 
 function isMode(value: unknown): value is ExtensionSettings["mode"] {
-  return value === "off" || value === "milady" || value === "debug";
+  return value === "off" || value === "milady" || value === "miladypro" || value === "debug";
 }
 
 export function normalizeWhitelistHandles(value: unknown): string[] {

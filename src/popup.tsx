@@ -38,7 +38,8 @@ const TAB_LABELS: Array<{ id: TabId; label: string }> = [
 
 const MODE_OPTIONS: Array<{ value: FilterMode; label: string; note: string }> = [
   { value: "off", label: "Off", note: "Do nothing. Show everything." },
-  { value: "milady", label: "MILADY", note: "Elevate milady. Diminish the rest." },
+  { value: "miladypro", label: "MILADY PRO", note: "Elevate milady. Show the rest normally." },
+  { value: "milady", label: "MILADY MAX", note: "Elevate milady. Diminish the rest." },
   { value: "debug", label: "Debug", note: "Show detection markers and scores." },
 ];
 
@@ -632,7 +633,7 @@ function App() {
       if (area === "sync") {
         if (changes.mode) {
           const mode = changes.mode.newValue;
-          if (mode === "milady" || mode === "debug" || mode === "off") {
+          if (mode === "milady" || mode === "miladypro" || mode === "debug" || mode === "off") {
             setSettings((current) => ({ ...current, mode }));
           }
         }
