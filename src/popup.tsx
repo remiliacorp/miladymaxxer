@@ -334,9 +334,8 @@ const styles = `
     align-items: center;
     justify-content: center;
     gap: 10px;
-    margin-top: 16px;
     padding-top: 16px;
-    border-top: 1px solid rgba(47, 77, 12, 0.15);
+    padding-bottom: 16px;
   }
 
   .sound-toggle-label {
