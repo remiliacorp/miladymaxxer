@@ -2,6 +2,7 @@ import { For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-j
 import { render } from "solid-js/web";
 
 import { DEFAULT_SETTINGS, DEFAULT_STATS } from "./shared/constants";
+import { getLevelProgress } from "./shared/levels";
 import {
   loadCollectedAvatars,
   loadMatchedAccounts,
@@ -30,9 +31,9 @@ import type {
 type TabId = "filter" | "stats" | "accounts" | "dataset";
 
 const TAB_LABELS: Array<{ id: TabId; label: string }> = [
+  { id: "accounts", label: "Accounts" },
   { id: "stats", label: "Stats" },
   { id: "filter", label: "Settings" },
-  { id: "accounts", label: "Accounts" },
   { id: "dataset", label: "Data" },
 ];
 
@@ -508,13 +509,20 @@ const styles = `
     min-width: 0;
   }
 
-  .account-handle {
+  .account-handle-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0;
     margin: 0 0 2px;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .account-handle {
     font-size: 14px;
     font-weight: 620;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    flex-shrink: 0;
   }
 
   .account-note {
@@ -540,6 +548,95 @@ const styles = `
     border-color: rgba(47, 77, 12, 0.4);
   }
 
+  .account-displayname {
+    font-weight: 400;
+    color: var(--text-faint);
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex-shrink: 1;
+  }
+
+  .account-level {
+    flex-shrink: 0;
+    margin-left: auto;
+    padding-left: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #b8860b;
+    white-space: nowrap;
+  }
+
+  .account-row-uncaught {
+    opacity: 0.55;
+  }
+
+  .account-row-uncaught:hover {
+    opacity: 0.8;
+  }
+
+  .collection-stats {
+    margin: 0 0 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #2f4d0c;
+    text-align: center;
+  }
+
+  .collection-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .collection-controls .account-search {
+    flex: 1;
+    margin-bottom: 0;
+  }
+
+  .sort-toggle {
+    display: flex;
+    border: 1px solid rgba(47, 77, 12, 0.25);
+    border-radius: 6px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .sort-button {
+    padding: 4px 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-faint);
+    font-size: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .sort-button[data-active="true"] {
+    background: rgba(47, 77, 12, 0.15);
+    color: #2f4d0c;
+    font-weight: 600;
+  }
+
+  .xp-bar-container {
+    height: 3px;
+    margin-top: 4px;
+    border-radius: 2px;
+    background: rgba(47, 77, 12, 0.1);
+    overflow: hidden;
+  }
+
+  .xp-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #d4af37, #f0c850);
+    transition: width 0.3s ease;
+  }
+
   .dataset-summary {
     margin-bottom: 14px;
   }
@@ -551,8 +648,9 @@ const styles = `
 `;
 
 function App() {
-  const [tab, setTab] = createSignal<TabId>("stats");
+  const [tab, setTab] = createSignal<TabId>("accounts");
   const [accountSearch, setAccountSearch] = createSignal("");
+  const [accountSort, setAccountSort] = createSignal<"level" | "recent">("level");
   const [settings, setSettings] = createSignal(DEFAULT_SETTINGS);
   const [stats, setStats] = createSignal<DetectionStats>(DEFAULT_STATS);
   const [matchedAccounts, setMatchedAccounts] = createSignal<MatchedAccountMap>({});
@@ -575,11 +673,32 @@ function App() {
       (account) => settings().whitelistHandles.includes(account.handle) && matchesAccountSearch(account),
     ),
   );
-  const filteredAccounts = createMemo(() =>
+  const nonWhitelistedAccounts = createMemo(() =>
     sortedAccounts().filter(
       (account) => !settings().whitelistHandles.includes(account.handle) && matchesAccountSearch(account),
     ),
   );
+  const caughtAccounts = createMemo(() => {
+    const accounts = nonWhitelistedAccounts().filter((a) => a.caught);
+    const sort = accountSort();
+    if (sort === "recent") {
+      return [...accounts].sort((a, b) => (b.caughtAt ?? "").localeCompare(a.caughtAt ?? ""));
+    }
+    return [...accounts].sort((a, b) => b.postsLiked - a.postsLiked);
+  });
+  const uncaughtAccounts = createMemo(() =>
+    nonWhitelistedAccounts().filter((a) => !a.caught),
+  );
+  const caughtCount = createMemo(() =>
+    Object.values(matchedAccounts()).filter((a) => a.caught).length,
+  );
+  const seenCount = createMemo(() => Object.keys(matchedAccounts()).length);
+  const catchRateLabel = createMemo(() => {
+    const seen = seenCount();
+    if (seen <= 0) return "0%";
+    const rate = (caughtCount() / seen) * 100;
+    return `${rate.toFixed(rate >= 10 ? 0 : 1)}%`;
+  });
   const matchRateLabel = createMemo(() => {
     const seen = stats().tweetsScanned;
     if (seen <= 0) {
@@ -648,6 +767,12 @@ function App() {
             soundEnabled: typeof changes.soundEnabled.newValue === "boolean" ? changes.soundEnabled.newValue : current.soundEnabled,
           }));
         }
+        if (changes.showLevelBadge) {
+          setSettings((current) => ({
+            ...current,
+            showLevelBadge: typeof changes.showLevelBadge.newValue === "boolean" ? changes.showLevelBadge.newValue : current.showLevelBadge,
+          }));
+        }
       }
 
       if (area === "local") {
@@ -669,6 +794,12 @@ function App() {
 
   const setMode = async (mode: FilterMode) => {
     const next = { ...settings(), mode };
+    setSettings(next);
+    await saveSettings(next);
+  };
+
+  const toggleLevelBadge = async () => {
+    const next = { ...settings(), showLevelBadge: !settings().showLevelBadge };
     setSettings(next);
     await saveSettings(next);
   };
@@ -764,6 +895,16 @@ function App() {
                 aria-label={settings().soundEnabled ? "Disable sound" : "Enable sound"}
               />
             </div>
+            <div class="sound-toggle">
+              <span class="sound-toggle-label">Level badges</span>
+              <button
+                type="button"
+                class="sound-toggle-switch"
+                data-enabled={String(settings().showLevelBadge)}
+                onClick={() => void toggleLevelBadge()}
+                aria-label={settings().showLevelBadge ? "Hide level badges" : "Show level badges"}
+              />
+            </div>
           </section>
         </Show>
 
@@ -787,127 +928,189 @@ function App() {
 
         <Show when={tab() === "accounts"}>
           <section class="panel">
-            <div class="panel-header">
-              <div>
-                <h2 class="panel-title">Caught</h2>
-                <p class="section-note">Tap to exempt or un-exempt.</p>
+            <p class="collection-stats">
+              {formatNumber(caughtCount())} caught / {formatNumber(seenCount())} seen · {catchRateLabel()}
+            </p>
+            <div class="collection-controls">
+              <input
+                class="account-search"
+                type="search"
+                value={accountSearch()}
+                onInput={(event) => setAccountSearch(event.currentTarget.value)}
+                placeholder="Search handles"
+                spellcheck={false}
+              />
+              <div class="sort-toggle">
+                <button
+                  type="button"
+                  class="sort-button"
+                  data-active={String(accountSort() === "level")}
+                  onClick={() => setAccountSort("level")}
+                >Level</button>
+                <button
+                  type="button"
+                  class="sort-button"
+                  data-active={String(accountSort() === "recent")}
+                  onClick={() => setAccountSort("recent")}
+                >Recent</button>
               </div>
             </div>
-            <input
-              class="account-search"
-              type="search"
-              value={accountSearch()}
-              onInput={(event) => setAccountSearch(event.currentTarget.value)}
-              placeholder="Search handles"
-              spellcheck={false}
-            />
             <Show
               when={sortedAccounts().length > 0}
-              fallback={<p class="empty">Nothing caught yet.</p>}
+              fallback={<p class="empty">Nothing detected yet.</p>}
             >
-              <Show
-                when={whitelistedAccounts().length > 0 || filteredAccounts().length > 0}
-                fallback={<p class="empty">No matching accounts.</p>}
-              >
-                <>
-                  <Show when={whitelistedAccounts().length > 0}>
-                    <div class="account-group">
-                      <p class="account-group-title">Exempt</p>
-                      <div class="account-list">
-                        <For each={whitelistedAccounts()}>
-                          {(account) => {
-                            const avatarUrl = getAvatarUrl(account.handle);
-                            return (
-                              <div
-                                class="account-row"
-                                data-whitelisted="true"
-                                title={`@${account.handle} is exempt`}
-                              >
-                                <Show
-                                  when={avatarUrl}
-                                  fallback={<div class="account-avatar-placeholder">✦</div>}
-                                >
-                                  <img
-                                    src={avatarUrl!}
-                                    alt=""
-                                    class="account-avatar"
-                                    onClick={(e) => openProfile(account.handle, e)}
-                                    style="cursor: pointer"
-                                  />
-                                </Show>
-                                <div class="account-info" onClick={() => void toggleWhitelist(account.handle)} style="cursor: pointer">
-                                  <p class="account-handle">@{account.handle}</p>
-                                  <p class="account-note">
-                                    {formatNumber(account.postsMatched)} hits, exempt
-                                    {account.lastDetectionScore != null && ` \u00b7 ${(account.lastDetectionScore * 100).toFixed(0)}%`}
-                                  </p>
-                                </div>
-                                <a
-                                  class="account-link"
-                                  href={`https://twitter.com/${account.handle}`}
-                                  target="_blank"
-                                  rel="noopener"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  View
-                                </a>
-                              </div>
-                            );
-                          }}
-                        </For>
-                      </div>
-                    </div>
-                  </Show>
+              <Show when={whitelistedAccounts().length > 0}>
+                <div class="account-group">
+                  <p class="account-group-title">Exempt</p>
+                  <div class="account-list">
+                    <For each={whitelistedAccounts()}>
+                      {(account) => {
+                        const avatarUrl = getAvatarUrl(account.handle);
+                        return (
+                          <div
+                            class="account-row"
+                            data-whitelisted="true"
+                            title={`@${account.handle} is exempt`}
+                          >
+                            <Show
+                              when={avatarUrl}
+                              fallback={<div class="account-avatar-placeholder">✦</div>}
+                            >
+                              <img
+                                src={avatarUrl!}
+                                alt=""
+                                class="account-avatar"
+                                onClick={(e) => openProfile(account.handle, e)}
+                                style="cursor: pointer"
+                              />
+                            </Show>
+                            <div class="account-info" onClick={() => void toggleWhitelist(account.handle)} style="cursor: pointer">
+                              <p class="account-handle">@{account.handle}</p>
+                              <p class="account-note">
+                                {formatNumber(account.postsMatched)} hits, exempt
+                              </p>
+                            </div>
+                            <a
+                              class="account-link"
+                              href={`https://twitter.com/${account.handle}`}
+                              target="_blank"
+                              rel="noopener"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              View
+                            </a>
+                          </div>
+                        );
+                      }}
+                    </For>
+                  </div>
+                </div>
+              </Show>
 
-                  <Show when={filteredAccounts().length > 0}>
-                    <div class="account-group">
-                      <p class="account-group-title">Caught</p>
-                      <div class="account-list">
-                        <For each={filteredAccounts()}>
-                          {(account) => {
-                            const avatarUrl = getAvatarUrl(account.handle);
-                            return (
-                              <div
-                                class="account-row"
-                                data-whitelisted="false"
-                                title={`Exempt @${account.handle}`}
-                              >
-                                <Show
-                                  when={avatarUrl}
-                                  fallback={<div class="account-avatar-placeholder">✦</div>}
-                                >
-                                  <img
-                                    src={avatarUrl!}
-                                    alt=""
-                                    class="account-avatar"
-                                    onClick={(e) => openProfile(account.handle, e)}
-                                    style="cursor: pointer"
-                                  />
+              <Show when={caughtAccounts().length > 0}>
+                <div class="account-group">
+                  <p class="account-group-title">Caught</p>
+                  <div class="account-list">
+                    <For each={caughtAccounts()}>
+                      {(account) => {
+                        const avatarUrl = getAvatarUrl(account.handle);
+                        const progress = () => getLevelProgress(account.postsLiked);
+                        const likeRate = () => account.postsMatched > 0 ? Math.round((account.postsLiked / account.postsMatched) * 100) : 0;
+                        const tooltipText = () => {
+                          const parts = [];
+                          if (account.caughtAt) parts.push(`Caught ${formatDate(account.caughtAt)}`);
+                          if (account.lastDetectionScore != null) parts.push(`Score ${(account.lastDetectionScore * 100).toFixed(0)}%`);
+                          parts.push(`Seen ${formatNumber(account.postsMatched)} times`);
+                          parts.push(`Liked ${formatNumber(account.postsLiked)} (${likeRate()}%)`);
+                          return parts.join(" \u00b7 ");
+                        };
+                        return (
+                          <div
+                            class="account-row"
+                            data-caught="true"
+                            title={tooltipText()}
+                          >
+                            <Show
+                              when={avatarUrl}
+                              fallback={<div class="account-avatar-placeholder">✦</div>}
+                            >
+                              <img
+                                src={avatarUrl!}
+                                alt=""
+                                class="account-avatar"
+                                onClick={(e) => openProfile(account.handle, e)}
+                                style="cursor: pointer"
+                              />
+                            </Show>
+                            <div class="account-info" onClick={(e) => openProfile(account.handle, e)} style="cursor: pointer">
+                              <div class="account-handle-row">
+                                <span class="account-handle">@{account.handle}</span>
+                                <Show when={account.displayName}>
+                                  <span class="account-displayname"> · {account.displayName}</span>
                                 </Show>
-                                <div class="account-info" onClick={() => void toggleWhitelist(account.handle)} style="cursor: pointer">
-                                  <p class="account-handle">@{account.handle}</p>
-                                  <p class="account-note">
-                                    {formatNumber(account.postsMatched)} hits
-                                    {account.lastDetectionScore != null && ` \u00b7 ${(account.lastDetectionScore * 100).toFixed(0)}%`}
-                                  </p>
-                                </div>
-                                <a
-                                  class="account-link"
-                                  href={`https://twitter.com/${account.handle}`}
-                                  target="_blank"
-                                  rel="noopener"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  View
-                                </a>
+                                <span class="account-level">Lv.{progress().level}</span>
                               </div>
-                            );
-                          }}
-                        </For>
-                      </div>
-                    </div>
-                  </Show>
-                </>
+                              <p class="account-note">
+                                {formatNumber(account.postsLiked)} likes · {progress().current}/{progress().needed} to next level
+                              </p>
+                              <div class="xp-bar-container">
+                                <div
+                                  class="xp-bar-fill"
+                                  style={{ width: `${progress().needed > 0 ? (progress().current / progress().needed) * 100 : 0}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }}
+                    </For>
+                  </div>
+                </div>
+              </Show>
+
+              <Show when={uncaughtAccounts().length > 0}>
+                <div class="account-group">
+                  <p class="account-group-title">Seen</p>
+                  <div class="account-list">
+                    <For each={uncaughtAccounts()}>
+                      {(account) => {
+                        const avatarUrl = getAvatarUrl(account.handle);
+                        return (
+                          <div
+                            class="account-row account-row-uncaught"
+                            title={`Seen ${formatNumber(account.postsMatched)} times${account.lastDetectionScore != null ? ` \u00b7 Score ${(account.lastDetectionScore * 100).toFixed(0)}%` : ""}`}
+                          >
+                            <Show
+                              when={avatarUrl}
+                              fallback={<div class="account-avatar-placeholder">✦</div>}
+                            >
+                              <img
+                                src={avatarUrl!}
+                                alt=""
+                                class="account-avatar"
+                                onClick={(e) => openProfile(account.handle, e)}
+                                style="cursor: pointer"
+                              />
+                            </Show>
+                            <div class="account-info" onClick={(e) => openProfile(account.handle, e)} style="cursor: pointer">
+                              <p class="account-handle">@{account.handle}</p>
+                              <p class="account-note">seen {formatNumber(account.postsMatched)} times</p>
+                            </div>
+                            <a
+                              class="account-link"
+                              href={`https://twitter.com/${account.handle}`}
+                              target="_blank"
+                              rel="noopener"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              View
+                            </a>
+                          </div>
+                        );
+                      }}
+                    </For>
+                  </div>
+                </div>
               </Show>
             </Show>
           </section>
