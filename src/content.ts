@@ -457,14 +457,29 @@ function findAvatar(tweet: HTMLElement): HTMLImageElement | null {
   if (avatarContainer) {
     const images = Array.from(avatarContainer.querySelectorAll<HTMLImageElement>(PROFILE_IMAGE));
     if (images.length > 0) {
-      return images.reduce((largest, img) => {
-        const largestSize = (largest.naturalWidth || largest.width || 0) * (largest.naturalHeight || largest.height || 0);
-        const imgSize = (img.naturalWidth || img.width || 0) * (img.naturalHeight || img.height || 0);
-        return imgSize > largestSize ? img : largest;
+      // Prefer the image inside an <a> link (the actual avatar, not badge overlays)
+      const linked = images.filter(img => img.closest("a"));
+      const candidates = linked.length > 0 ? linked : images;
+      // Pick the largest by URL dimensions or natural size
+      return candidates.reduce((best, img) => {
+        const bestSize = getImageSize(best);
+        const imgSize = getImageSize(img);
+        return imgSize > bestSize ? img : best;
       });
     }
   }
   return tweet.querySelector<HTMLImageElement>(PROFILE_IMAGE);
+}
+
+function getImageSize(img: HTMLImageElement): number {
+  // Try natural dimensions first
+  const natural = (img.naturalWidth || 0) * (img.naturalHeight || 0);
+  if (natural > 0) return natural;
+  // Try URL size hint (e.g. /profile_images/.../photo_48x48.jpg)
+  const urlMatch = img.src.match(/(\d+)x(\d+)/);
+  if (urlMatch) return parseInt(urlMatch[1], 10) * parseInt(urlMatch[2], 10);
+  // Fall back to rendered size
+  return (img.width || 0) * (img.height || 0);
 }
 
 function findAuthor(tweet: HTMLElement): { handle: string; displayName: string | null } | null {

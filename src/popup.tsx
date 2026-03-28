@@ -115,7 +115,6 @@ const styles = `
     background: linear-gradient(180deg, #d9f0d6 0%, #f4ffee 100%);
     border-radius: 0;
     border: none;
-    overflow: hidden;
   }
 
 

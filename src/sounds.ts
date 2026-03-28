@@ -264,8 +264,10 @@ export function attachDMSounds(): void {
         return;
       }
     }
+    const inDMs = window.location.pathname.includes("/messages") ||
+                  window.location.pathname.includes("/i/chat");
     const dmPanel = target.closest(DM_CONVERSATION_PANEL) || target.closest(DM_CONTAINER);
-    if (dmPanel && window.location.pathname.includes("/messages")) {
+    if (dmPanel && inDMs) {
       playClickSound(false);
     }
   }, { passive: true, capture: true });
@@ -293,6 +295,24 @@ export function attachDMSounds(): void {
       playSendSound();
     }
   }, { passive: true, capture: true });
+
+  // Hover sound on chat list items and DM links
+  document.addEventListener("mouseover", (e) => {
+    if (settings.mode === "off") return;
+    if (!getAudioContext(true)) return;
+
+    const target = e.target as HTMLElement;
+    const inDMs = window.location.pathname.includes("/messages") ||
+                  window.location.pathname.includes("/i/chat");
+    if (!inDMs) return;
+
+    // Chat list items: links inside dm-container that navigate to a conversation
+    const chatLink = target.closest('a[href*="/messages/"], a[href*="/i/chat/"]') as HTMLElement | null;
+    if (chatLink && !soundsAttached.has(chatLink)) {
+      soundsAttached.add(chatLink);
+      playTone(600, 0.04, "sine", 0.03, 0, 0.01);
+    }
+  }, { passive: true });
 
 }
 
