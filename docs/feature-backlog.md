@@ -20,6 +20,17 @@
 - Risk: Medium (automated posting — X could rate-limit or flag)
 - Effort: ~2-3 hours
 
+### Milady Site Theme
+- Toggle in settings: Default / Milady
+- Subtle green tint over Twitter's white background — lighter than mint cards so cards still pop
+- Colors only, no font changes
+- Page background: very light green wash (e.g., `#f8fff4` or similar)
+- Borders, dividers: green-tinted instead of grey
+- Sidebar, trending, compose: tinted to match
+- Dark mode: very subtle dark green tint (similar to current dark card approach)
+- Independent of card theme toggle
+- Effort: ~2 hours (CSS only, no JS logic beyond the setting toggle)
+
 ### Timeline Thread Margin Tightening
 - Currently only tightens in /status/ thread view
 - Would be nice to also tighten on timeline reply chains
