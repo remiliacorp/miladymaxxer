@@ -12,7 +12,7 @@ import {
 import type { ExtensionSettings } from "./shared/types";
 
 // Module-level settings reference, updated by content.ts via setSoundSettings()
-let settings: ExtensionSettings = { mode: "off", whitelistHandles: [], miladyListHandles: [], soundEnabled: false, showLevelBadge: true };
+let settings: ExtensionSettings = { mode: "off", whitelistHandles: [], miladyListHandles: [], soundEnabled: false, showLevelBadge: true, cardTheme: "full" };
 
 export function setSoundSettings(next: ExtensionSettings): void {
   settings = next;

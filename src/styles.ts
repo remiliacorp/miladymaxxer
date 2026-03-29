@@ -109,7 +109,9 @@ export function injectStyles(): void {
 
     .miladymaxxer-level-inline {
       color: rgb(113, 118, 123) !important;
-      font: inherit !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+      font-size: 13px !important;
+      font-weight: 400 !important;
       white-space: nowrap !important;
       margin-left: 4px !important;
       display: inline !important;
