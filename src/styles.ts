@@ -645,16 +645,16 @@ export function injectStyles(): void {
       position: relative !important;
     }
 
-    /* Style the bubble itself, not the full-width DM row. */
+    /* Style the bubble itself, not the full-width DM row — green theme */
     [data-miladymaxxer-effect="milady-dm"] [data-testid^="message-text-"] {
       position: relative !important;
       border-radius: 18px !important;
-      outline: 1px solid rgba(212, 175, 55, 0.24) !important;
+      outline: 1px solid rgba(47, 77, 12, 0.2) !important;
       outline-offset: -1px !important;
-      background: linear-gradient(180deg, rgba(255, 252, 240, 0.72) 0%, rgba(255, 255, 255, 0.82) 100%) !important;
+      background: linear-gradient(180deg, rgba(248, 255, 246, 0.8) 0%, rgba(255, 255, 255, 0.85) 100%) !important;
       box-shadow:
-        0 4px 14px rgba(184, 134, 11, 0.08),
-        0 8px 24px rgba(212, 175, 55, 0.08) !important;
+        0 4px 14px rgba(47, 77, 12, 0.06),
+        0 8px 24px rgba(47, 77, 12, 0.04) !important;
       overflow: hidden !important;
     }
 
@@ -670,10 +670,10 @@ export function injectStyles(): void {
       border-radius: inherit !important;
       background: linear-gradient(
         135deg,
-        rgba(255, 223, 100, 0.12) 0%,
-        rgba(212, 175, 55, 0.05) 30%,
+        rgba(47, 77, 12, 0.06) 0%,
+        rgba(100, 160, 60, 0.03) 30%,
         rgba(255, 255, 255, 0) 60%,
-        rgba(255, 223, 100, 0.08) 100%
+        rgba(47, 77, 12, 0.04) 100%
       ) !important;
       pointer-events: none !important;
       z-index: 0 !important;
@@ -685,26 +685,26 @@ export function injectStyles(): void {
         contrast(1.08)
         saturate(1.2)
         brightness(1.04)
-        drop-shadow(0 0 6px rgba(212, 175, 55, 0.24)) !important;
+        drop-shadow(0 0 6px rgba(47, 77, 12, 0.2)) !important;
     }
 
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady-dm"] [data-testid^="message-text-"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady-dm"] [data-testid^="message-text-"] {
-      background: linear-gradient(180deg, rgba(36, 28, 14, 0.88) 0%, rgba(24, 20, 10, 0.92) 100%) !important;
-      outline-color: rgba(160, 135, 50, 0.35) !important;
+      background: linear-gradient(180deg, rgba(14, 26, 16, 0.9) 0%, rgba(10, 20, 12, 0.92) 100%) !important;
+      outline-color: rgba(60, 120, 40, 0.3) !important;
       box-shadow:
         0 4px 16px rgba(0, 0, 0, 0.35),
-        0 8px 28px rgba(120, 100, 30, 0.12) !important;
+        0 8px 28px rgba(40, 100, 25, 0.08) !important;
     }
 
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady-dm"] [data-testid^="message-text-"]::before,
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady-dm"] [data-testid^="message-text-"]::before {
       background: linear-gradient(
         135deg,
-        rgba(160, 140, 55, 0.06) 0%,
-        rgba(140, 120, 45, 0.03) 30%,
+        rgba(47, 77, 12, 0.05) 0%,
+        rgba(40, 65, 15, 0.02) 30%,
         rgba(255, 255, 255, 0) 60%,
-        rgba(160, 140, 55, 0.04) 100%
+        rgba(47, 77, 12, 0.03) 100%
       ) !important;
     }
 
