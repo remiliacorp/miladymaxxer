@@ -11,7 +11,6 @@ import {
   FOLLOW_BUTTON,
   FOLLOWING_INDICATOR,
   FOLLOWS_YOU_INDICATOR,
-  THREAD_CONNECTOR,
   USER_NAME,
 } from "./selectors";
 import type { ExtensionSettings } from "./shared/types";
@@ -50,21 +49,30 @@ const xpCreditedKeys = new Set<string>();
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-function findPreviousArticle(tweet: HTMLElement): HTMLElement | null {
-  const container = tweet.closest(CELL_INNER_DIV);
-  if (!container) return null;
+function hasTweetAbove(tweet: HTMLElement): boolean {
+  const container = tweet.closest(CELL_INNER_DIV) ?? tweet.parentElement;
+  if (!container) return false;
+  const prev = container.previousElementSibling;
+  return !!prev?.querySelector(TWEET);
+}
 
-  // Check if this tweet is part of a reply thread by looking for the vertical connector line
-  // These lines connect replies to their parent and have specific background colors per theme
-  const avatarArea = container.querySelector(TWEET_USER_AVATAR)?.parentElement?.parentElement;
-  const hasThreadConnector = avatarArea?.querySelector(THREAD_CONNECTOR);
+function hasTweetBelow(tweet: HTMLElement): boolean {
+  const container = tweet.closest(CELL_INNER_DIV) ?? tweet.parentElement;
+  if (!container) return false;
+  const next = container.nextElementSibling;
+  return !!next?.querySelector(TWEET);
+}
 
-  if (!hasThreadConnector) return null;
+function getEdgeFade(tweet: HTMLElement): string {
+  // Only apply edge fades in detail/thread view (/status/ URL)
+  if (!/\/status\//.test(window.location.href)) return "none";
 
-  const prevContainer = container.previousElementSibling;
-  if (!prevContainer) return null;
-
-  return prevContainer.querySelector<HTMLElement>(TWEET);
+  const above = hasTweetAbove(tweet);
+  const below = hasTweetBelow(tweet);
+  if (above && below) return "both";
+  if (above) return "top";
+  if (below) return "bottom";
+  return "none";
 }
 
 function applyDebugState(tweet: HTMLElement): void {
@@ -93,6 +101,7 @@ export function clearVisualState(tweet: HTMLElement): void {
   delete tweet.dataset.miladymaxxerDiamond;
   delete tweet.dataset.miladymaxxerNoLikes;
   delete tweet.dataset.miladymaxxerLiked;
+  delete tweet.dataset.miladymaxxerFade;
 }
 
 export function clearPlaceholder(tweet: HTMLElement): void {
@@ -403,12 +412,12 @@ export function applyMode(ctx: EffectsContext, tweet: HTMLElement, normalizedUrl
       tweet.style.display = "";
       if (isMatch) {
         tweet.dataset.miladymaxxerEffect = "milady";
-        // Check if previous tweet is non-milady for gradient effect
-        const prevArticle = findPreviousArticle(tweet);
-        if (prevArticle?.dataset.miladymaxxerEffect === "diminish") {
-          tweet.dataset.miladyFadeIn = "true";
+        // Set edge fade based on adjacent tweets
+        const fade = getEdgeFade(tweet);
+        if (fade !== "none") {
+          tweet.dataset.miladymaxxerFade = fade;
         } else {
-          delete tweet.dataset.miladyFadeIn;
+          delete tweet.dataset.miladymaxxerFade;
         }
         // Check for 100+ likes - diamond tier
         if (hasHighLikes(tweet)) {
@@ -462,7 +471,7 @@ export function applyMode(ctx: EffectsContext, tweet: HTMLElement, normalizedUrl
       removeLevelBadge(tweet);
       updateMiladyListButton(ctx, tweet);
       tweet.dataset.miladymaxxerEffect = "diminish";
-      delete tweet.dataset.miladyFadeIn;
+      delete tweet.dataset.miladymaxxerThread;
       delete tweet.dataset.miladymaxxerNoLikes;
       delete tweet.dataset.miladymaxxerLiked;
       return;

@@ -174,4 +174,16 @@ export const LOGO_REPLACEMENT_CLASS = 'milady-logo-replacement';
 // ---------------------------------------------------------------------------
 
 /** Vertical connector lines between threaded replies. */
-export const THREAD_CONNECTOR = 'div[style*="background-color: rgb(207, 217, 222)"], div[style*="background-color: rgb(56, 68, 77)"], div[style*="background-color: rgb(51, 54, 57)"]';
+export const THREAD_CONNECTOR = [
+  // Light mode
+  'div[style*="background-color: rgb(207, 217, 222)"]',
+  'div[style*="background-color: rgb(239, 243, 244)"]',
+  'div[style*="background-color: rgb(196, 207, 214)"]',
+  // Dim mode
+  'div[style*="background-color: rgb(56, 68, 77)"]',
+  'div[style*="background-color: rgb(61, 73, 82)"]',
+  // Dark mode
+  'div[style*="background-color: rgb(51, 54, 57)"]',
+  'div[style*="background-color: rgb(47, 51, 54)"]',
+  'div[style*="background-color: rgb(66, 83, 100)"]',
+].join(", ");

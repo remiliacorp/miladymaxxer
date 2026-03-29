@@ -146,30 +146,19 @@ export function injectStyles(): void {
         0 4px 8px rgba(0, 0, 0, 0.1),
         0 8px 24px rgba(212, 175, 55, 0.2),
         inset 0 1px 0 rgba(255, 215, 0, 0.15) !important;
-      transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.4s ease, border-color 0.4s ease !important;
+      transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.4s ease !important;
     }
 
     /* Subtle centered float on hover */
     [data-miladymaxxer-effect="milady"]:hover {
       transform: translateY(-1px) scale(1.003) !important;
+      z-index: 10 !important;
       box-shadow:
         0 4px 8px rgba(0, 0, 0, 0.12),
         0 8px 24px rgba(212, 175, 55, 0.28),
         inset 0 1px 0 rgba(255, 215, 0, 0.15) !important;
     }
 
-    /* Connected milady tweets - merge adjacent cards */
-    [data-miladymaxxer-effect="milady"] + [data-miladymaxxer-effect="milady"],
-    [data-miladymaxxer-effect="milady"] + [data-miladymaxxer-effect="diminish"] + [data-miladymaxxer-effect="milady"] {
-      border-top-left-radius: 0 !important;
-      border-top-right-radius: 0 !important;
-      border-top: none !important;
-    }
-
-    [data-miladymaxxer-effect="milady"]:has(+ [data-miladymaxxer-effect="milady"]) {
-      border-bottom-left-radius: 0 !important;
-      border-bottom-right-radius: 0 !important;
-    }
 
 
 
@@ -626,24 +615,71 @@ export function injectStyles(): void {
 
     /* ===== END PROFILE PAGE STYLING ===== */
 
-    /* Milady reply after non-milady - seamless top edge */
-    [data-milady-fade-in="true"] {
-      border-top: none !important;
+    /* ===== EDGE FADE ===== */
+    /* Mask only the ::before and ::after overlays — tweet content and connector lines stay visible */
+
+    /* Fade top edge — square top corners */
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="top"],
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="top"]::before,
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="top"]::after {
       border-top-left-radius: 0 !important;
       border-top-right-radius: 0 !important;
-      margin-top: -1px !important;
-      /* Fade background from transparent at top to full color at 5% */
-      background: linear-gradient(to bottom,
-        rgba(255, 252, 240, 0) 0%,
-        rgba(255, 252, 240, 1) 5%,
-        rgba(255, 255, 255, 1) 100%) !important;
     }
 
-    /* Fade the gold overlays at the top too */
-    [data-milady-fade-in="true"]::before,
-    [data-milady-fade-in="true"]::after {
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="top"] {
+      border-top-color: transparent !important;
+    }
+
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="top"]::before,
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="top"]::after {
       -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 5%) !important;
       mask-image: linear-gradient(to bottom, transparent 0%, black 5%) !important;
+    }
+
+    /* Fade both edges — square all corners */
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="both"],
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="both"]::before,
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="both"]::after {
+      border-radius: 0 !important;
+    }
+
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="both"] {
+      border-top-color: transparent !important;
+      border-bottom-color: transparent !important;
+    }
+
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="both"]::before,
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="both"]::after {
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%) !important;
+      mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%) !important;
+    }
+
+    /* Fade bottom edge — square bottom corners */
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="bottom"],
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="bottom"]::before,
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="bottom"]::after {
+      border-bottom-left-radius: 0 !important;
+      border-bottom-right-radius: 0 !important;
+    }
+
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="bottom"] {
+      border-bottom-color: transparent !important;
+    }
+
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="bottom"]::before,
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="bottom"]::after {
+      -webkit-mask-image: linear-gradient(to bottom, black 95%, transparent 100%) !important;
+      mask-image: linear-gradient(to bottom, black 95%, transparent 100%) !important;
+    }
+
+    /* Hover: remove fade, restore rounded corners */
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade]:hover,
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade]:hover::before,
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade]:hover::after {
+      border-radius: 12px !important;
+      border-color: rgba(212, 175, 55, 0.4) !important;
+      -webkit-mask-image: none !important;
+      mask-image: none !important;
     }
 
     /* Reset styling for quoted tweets inside milady posts - give them opaque background */
