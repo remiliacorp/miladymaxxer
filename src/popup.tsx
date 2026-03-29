@@ -39,7 +39,7 @@ const TAB_LABELS: Array<{ id: TabId; label: string }> = [
 
 const MODE_OPTIONS: Array<{ value: FilterMode; label: string; note: string }> = [
   { value: "off", label: "Off", note: "Do nothing. Show everything." },
-  { value: "milady", label: "MILADY", note: "Elevate milady. Diminish the rest." },
+  { value: "milady", label: "MILADY", note: "Color code milady." },
   { value: "debug", label: "Debug", note: "Show detection markers and scores." },
 ];
 
@@ -71,10 +71,14 @@ const styles = `
     box-sizing: border-box;
   }
 
+  html, body {
+    height: 100%;
+  }
+
   body {
     margin: 0;
     min-width: 320px;
-    background: var(--bg-0);
+    background: #f4ffee;
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
     font-size: 13px;
@@ -487,7 +491,7 @@ const styles = `
     height: 36px;
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid rgba(47, 77, 12, 0.4);
+    border: 2px solid rgba(47, 77, 12, 0.3);
     box-shadow: 0 2px 6px rgba(47, 77, 12, 0.2);
     flex-shrink: 0;
   }
@@ -572,11 +576,91 @@ const styles = `
   }
 
   .account-row-uncaught {
-    opacity: 0.55;
+    background: rgba(120, 120, 120, 0.08);
+    border-color: rgba(120, 120, 120, 0.15);
+    padding: 5px 8px;
+    gap: 6px;
+  }
+
+  .account-row-uncaught .account-avatar,
+  .account-row-uncaught .account-avatar-placeholder {
+    width: 22px;
+    height: 22px;
+    border-width: 1px;
+    border-color: rgba(120, 120, 120, 0.3);
+  }
+
+  .account-row-uncaught .account-handle {
+    font-size: 11px;
+    font-weight: 500;
+    color: #888;
+  }
+
+  .account-row-uncaught .account-note {
+    font-size: 10px;
+    color: #aaa;
+  }
+
+  .account-row-uncaught .account-link {
+    font-size: 9px;
+    padding: 2px 6px;
   }
 
   .account-row-uncaught:hover {
-    opacity: 0.8;
+    border-color: rgba(120, 120, 120, 0.3);
+  }
+
+  .level-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1px 7px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #4a7a28 0%, #5d9432 100%);
+    color: #f4ffee;
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .tooltip-trigger {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(47, 77, 12, 0.1);
+    border: 1px solid rgba(47, 77, 12, 0.2);
+    color: var(--text-faint);
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: help;
+  }
+
+  .tooltip-trigger:hover + .tooltip-content {
+    display: block;
+  }
+
+  .tooltip-content {
+    display: none;
+    position: absolute;
+    top: 22px;
+    right: 0;
+    width: 220px;
+    padding: 8px 10px;
+    background: rgba(15, 20, 10, 0.95);
+    color: #d9f0d6;
+    font-size: 10px;
+    line-height: 1.5;
+    border-radius: 6px;
+    z-index: 10;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   }
 
   .collection-stats {
@@ -812,6 +896,12 @@ function App() {
     await saveSettings(next);
   };
 
+  const setCardTheme = async (theme: string) => {
+    const next = { ...settings(), cardTheme: theme as "full" | "no-premium" | "silver-only" | "off" };
+    setSettings(next);
+    await saveSettings(next);
+  };
+
   const toggleWhitelist = async (handle: string) => {
     const current = settings().whitelistHandles;
     const nextWhitelist = current.includes(handle)
@@ -907,6 +997,15 @@ function App() {
                 aria-label={settings().showLevelBadge ? "Hide level badges" : "Show level badges"}
               />
             </div>
+            <div style="margin-top: 12px; margin-bottom: 12px">
+              <p class="section-note" style="margin-bottom: 6px">Card theming</p>
+              <div class="sort-toggle" style="width: 100%">
+                <button type="button" class="sort-button" style="flex:1" data-active={String(settings().cardTheme === "full")} onClick={() => void setCardTheme("full")}>Full</button>
+                <button type="button" class="sort-button" style="flex:1" data-active={String(settings().cardTheme === "no-premium")} onClick={() => void setCardTheme("no-premium")}>Green/silver only</button>
+                <button type="button" class="sort-button" style="flex:1" data-active={String(settings().cardTheme === "silver-only")} onClick={() => void setCardTheme("silver-only")}>Silver only</button>
+                <button type="button" class="sort-button" style="flex:1" data-active={String(settings().cardTheme === "off")} onClick={() => void setCardTheme("off")}>Off</button>
+              </div>
+            </div>
           </section>
         </Show>
 
@@ -929,7 +1028,19 @@ function App() {
         </Show>
 
         <Show when={tab() === "accounts"}>
-          <section class="panel">
+          <section class="panel" style="position: relative">
+            <span class="tooltip-trigger">?</span>
+            <div class="tooltip-content">
+              <b>Inverse quadratic progression</b><br/>
+              Level = floor(√ posts liked)<br/>
+              Player level = floor(√(likes / 3))<br/><br/>
+              <b>Card tiers (by post likes):</b><br/>
+              Silver — uncaught (Lv.0)<br/>
+              Mint — caught, &lt;75 likes<br/>
+              Gold — 75+ likes<br/>
+              Diamond — 250+ likes<br/><br/>
+              Allow-listed accounts give 25% player XP.
+            </div>
             <p class="collection-stats">
               {formatNumber(caughtCount())} caught / {formatNumber(seenCount())} seen · {catchRateLabel()}
             </p>
@@ -967,7 +1078,6 @@ function App() {
                   <div class="account-list">
                     <For each={whitelistedAccounts()}>
                       {(account) => {
-                        const avatarUrl = getAvatarUrl(account.handle);
                         return (
                           <div
                             class="account-row"
@@ -975,16 +1085,20 @@ function App() {
                             title={`@${account.handle} is exempt`}
                           >
                             <Show
-                              when={avatarUrl}
+                              when={getAvatarUrl(account.handle)}
                               fallback={<div class="account-avatar-placeholder">✦</div>}
                             >
-                              <img
-                                src={avatarUrl!}
-                                alt=""
-                                class="account-avatar"
-                                onClick={(e) => openProfile(account.handle, e)}
-                                style="cursor: pointer"
-                              />
+                              {(url) => (
+                                <img
+                                  src={url()}
+                                  alt=""
+                                  class="account-avatar"
+                                  loading="eager"
+                                  referrerPolicy="no-referrer"
+                                  onClick={(e) => openProfile(account.handle, e)}
+                                  style="cursor: pointer"
+                                />
+                              )}
                             </Show>
                             <div class="account-info" onClick={() => void toggleWhitelist(account.handle)} style="cursor: pointer">
                               <p class="account-handle">@{account.handle}</p>
@@ -1033,27 +1147,28 @@ function App() {
                             title={tooltipText()}
                           >
                             <Show
-                              when={avatarUrl}
+                              when={getAvatarUrl(account.handle)}
                               fallback={<div class="account-avatar-placeholder">✦</div>}
                             >
-                              <img
-                                src={avatarUrl!}
-                                alt=""
-                                class="account-avatar"
-                                onClick={(e) => openProfile(account.handle, e)}
-                                style="cursor: pointer"
-                              />
+                              {(url) => (
+                                <img
+                                  src={url()}
+                                  alt=""
+                                  class="account-avatar"
+                                  loading="eager"
+                                  referrerPolicy="no-referrer"
+                                  onClick={(e) => openProfile(account.handle, e)}
+                                  style="cursor: pointer"
+                                />
+                              )}
                             </Show>
                             <div class="account-info" onClick={(e) => openProfile(account.handle, e)} style="cursor: pointer">
                               <div class="account-handle-row">
-                                <span class="account-handle">@{account.handle}</span>
-                                <Show when={account.displayName}>
-                                  <span class="account-displayname"> · {account.displayName}</span>
-                                </Show>
-                                <span class="account-level">Lv.{progress().level}</span>
+                                <span class="account-handle" style="font-weight: 700; font-size: 13px">{account.displayName || account.handle}</span>
+                                <span class="level-pill">Lv.{progress().level}</span>
                               </div>
-                              <p class="account-note">
-                                {formatNumber(account.postsLiked)} likes · {progress().current}/{progress().needed} to next level
+                              <p class="account-note" style="margin: 0">
+                                @{account.handle} · {formatNumber(account.postsLiked)} likes
                               </p>
                               <div class="xp-bar-container">
                                 <div
@@ -1076,23 +1191,26 @@ function App() {
                   <div class="account-list">
                     <For each={uncaughtAccounts()}>
                       {(account) => {
-                        const avatarUrl = getAvatarUrl(account.handle);
                         return (
                           <div
                             class="account-row account-row-uncaught"
                             title={`Seen ${formatNumber(account.postsMatched)} times${account.lastDetectionScore != null ? ` \u00b7 Score ${(account.lastDetectionScore * 100).toFixed(0)}%` : ""}`}
                           >
                             <Show
-                              when={avatarUrl}
+                              when={getAvatarUrl(account.handle)}
                               fallback={<div class="account-avatar-placeholder">✦</div>}
                             >
-                              <img
-                                src={avatarUrl!}
-                                alt=""
-                                class="account-avatar"
-                                onClick={(e) => openProfile(account.handle, e)}
-                                style="cursor: pointer"
-                              />
+                              {(url) => (
+                                <img
+                                  src={url()}
+                                  alt=""
+                                  class="account-avatar"
+                                  loading="eager"
+                                  referrerPolicy="no-referrer"
+                                  onClick={(e) => openProfile(account.handle, e)}
+                                  style="cursor: pointer"
+                                />
+                              )}
                             </Show>
                             <div class="account-info" onClick={(e) => openProfile(account.handle, e)} style="cursor: pointer">
                               <p class="account-handle">@{account.handle}</p>

@@ -43,14 +43,19 @@ describe("getLevelProgress", () => {
     expect(progress).toEqual({ level: 0, current: 0, needed: 1 });
   });
 
+  it("returns 1 progress at level 1 with first like", () => {
+    const progress = getLevelProgress(1);
+    expect(progress).toEqual({ level: 1, current: 1, needed: 3 });
+  });
+
   it("returns full progress just before level up", () => {
     const progress = getLevelProgress(3);
     expect(progress).toEqual({ level: 1, current: 2, needed: 3 });
   });
 
-  it("returns zero progress right at a level boundary", () => {
+  it("returns 1 progress right at a level boundary (postsLiked > 0)", () => {
     const progress = getLevelProgress(4);
-    expect(progress).toEqual({ level: 2, current: 0, needed: 5 });
+    expect(progress).toEqual({ level: 2, current: 1, needed: 5 });
   });
 
   it("returns mid-level progress", () => {

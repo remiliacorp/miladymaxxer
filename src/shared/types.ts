@@ -1,4 +1,5 @@
 export type FilterMode = "off" | "milady" | "debug";
+export type CardTheme = "full" | "no-premium" | "silver-only" | "off";
 
 export interface ExtensionSettings {
   mode: FilterMode;
@@ -6,6 +7,7 @@ export interface ExtensionSettings {
   miladyListHandles: string[];
   soundEnabled: boolean;
   showLevelBadge: boolean;
+  cardTheme: CardTheme;
 }
 
 export interface DetectionStats {
@@ -54,6 +56,10 @@ export interface CollectedAvatar {
 }
 
 export type CollectedAvatarMap = Record<string, CollectedAvatar>;
+
+export interface PlayerStats {
+  totalLikesGiven: number;
+}
 
 export interface ModelMetadata {
   architecture?: string;

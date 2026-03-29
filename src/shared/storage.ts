@@ -1,6 +1,7 @@
 import {
   DEFAULT_COLLECTED_AVATARS,
   DEFAULT_MATCHED_ACCOUNTS,
+  DEFAULT_PLAYER_STATS,
   DEFAULT_SETTINGS,
   DEFAULT_STATS,
 } from "./constants";
@@ -9,6 +10,7 @@ import type {
   DetectionStats,
   ExtensionSettings,
   MatchedAccountMap,
+  PlayerStats,
 } from "./types";
 
 export async function loadSettings(): Promise<ExtensionSettings> {
@@ -18,6 +20,7 @@ export async function loadSettings(): Promise<ExtensionSettings> {
     miladyListHandles: DEFAULT_SETTINGS.miladyListHandles,
     soundEnabled: DEFAULT_SETTINGS.soundEnabled,
     showLevelBadge: DEFAULT_SETTINGS.showLevelBadge,
+    cardTheme: DEFAULT_SETTINGS.cardTheme,
   });
   return {
     mode: isMode(stored.mode) ? stored.mode : DEFAULT_SETTINGS.mode,
@@ -25,6 +28,7 @@ export async function loadSettings(): Promise<ExtensionSettings> {
     miladyListHandles: normalizeWhitelistHandles(stored.miladyListHandles),
     soundEnabled: typeof stored.soundEnabled === "boolean" ? stored.soundEnabled : DEFAULT_SETTINGS.soundEnabled,
     showLevelBadge: typeof stored.showLevelBadge === "boolean" ? stored.showLevelBadge : DEFAULT_SETTINGS.showLevelBadge,
+    cardTheme: isCardTheme(stored.cardTheme) ? stored.cardTheme : DEFAULT_SETTINGS.cardTheme,
   };
 }
 
@@ -35,6 +39,7 @@ export async function saveSettings(settings: ExtensionSettings): Promise<void> {
     miladyListHandles: normalizeWhitelistHandles(settings.miladyListHandles),
     soundEnabled: settings.soundEnabled,
     showLevelBadge: settings.showLevelBadge,
+    cardTheme: settings.cardTheme,
   });
 }
 
@@ -77,6 +82,23 @@ export async function saveCollectedAvatars(collectedAvatars: CollectedAvatarMap)
   });
 }
 
+export async function loadPlayerStats(): Promise<PlayerStats> {
+  const stored = await chrome.storage.local.get({ playerStats: DEFAULT_PLAYER_STATS });
+  return normalizePlayerStats(stored.playerStats);
+}
+
+export async function savePlayerStats(playerStats: PlayerStats): Promise<void> {
+  await chrome.storage.local.set({ playerStats });
+}
+
+export function normalizePlayerStats(raw: unknown): PlayerStats {
+  if (!raw || typeof raw !== "object") return { ...DEFAULT_PLAYER_STATS };
+  const obj = raw as Record<string, unknown>;
+  return {
+    totalLikesGiven: readNumber(obj.totalLikesGiven),
+  };
+}
+
 export async function resetStats(): Promise<void> {
   await saveStats(DEFAULT_STATS);
 }
@@ -91,6 +113,10 @@ export async function resetCollectedAvatars(): Promise<void> {
 
 function isMode(value: unknown): value is ExtensionSettings["mode"] {
   return value === "off" || value === "milady" || value === "debug";
+}
+
+function isCardTheme(value: unknown): value is ExtensionSettings["cardTheme"] {
+  return value === "full" || value === "no-premium" || value === "silver-only" || value === "off";
 }
 
 export function normalizeWhitelistHandles(value: unknown): string[] {

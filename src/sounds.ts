@@ -147,6 +147,27 @@ export function playCatchSound(): void {
   setTimeout(() => playTone(1318.5, 0.25, "sine", 0.04), 140); // E6 sparkle
 }
 
+export function playLogoHoverSound(): void {
+  if (!settings.soundEnabled || !getAudioContext(true)) return;
+  playTone(1200, 0.12, "sine", 0.04);
+  setTimeout(() => playTone(1500, 0.1, "sine", 0.03), 30);
+}
+
+export function playLogoTune(): void {
+  if (!settings.soundEnabled) return;
+  // 3-note polyphonic uplift — bright and short
+  playChord([523.25, 659.25], 0.15, 0.05); // C5+E5
+  setTimeout(() => playChord([659.25, 783.99], 0.15, 0.05), 100); // E5+G5
+  setTimeout(() => playChord([783.99, 1046.5], 0.2, 0.04), 200); // G5+C6
+}
+
+export function playLetterPip(index: number): void {
+  if (!settings.soundEnabled) return;
+  // Tiny high pip, pitch rises slightly per letter
+  const baseFreq = 1400 + index * 60;
+  playTone(baseFreq, 0.04, "sine", 0.04, 0, 0.01);
+}
+
 export function playLevelUpSound(): void {
   if (!settings.soundEnabled) return;
   // Ascending arpeggio — progression feel

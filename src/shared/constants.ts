@@ -3,6 +3,7 @@ import type {
   DetectionStats,
   ExtensionSettings,
   MatchedAccountMap,
+  PlayerStats,
 } from "./types";
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {
@@ -11,6 +12,7 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   miladyListHandles: [],
   soundEnabled: true,
   showLevelBadge: true,
+  cardTheme: "full" as const,
 };
 
 export const DEFAULT_STATS: DetectionStats = {
@@ -25,6 +27,7 @@ export const DEFAULT_STATS: DetectionStats = {
 
 export const DEFAULT_MATCHED_ACCOUNTS: MatchedAccountMap = {};
 export const DEFAULT_COLLECTED_AVATARS: CollectedAvatarMap = {};
+export const DEFAULT_PLAYER_STATS: PlayerStats = { totalLikesGiven: 0 };
 
 export const CLASSIFIER_MODEL_INPUT_SIZE = 128;
 export const CLASSIFIER_MODEL_CHANNELS = 3;

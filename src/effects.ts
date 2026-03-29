@@ -44,6 +44,7 @@ export const revealed = new WeakMap<HTMLElement, string>();
 let miladyLikesThisSession = 0;
 const countedLikes = new WeakSet<HTMLElement>();
 const xpCreditedKeys = new Set<string>();
+const seenTweets = new WeakSet<HTMLElement>(); // tracks tweets we've seen before (for like transition detection)
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -75,6 +76,34 @@ function getEdgeFade(tweet: HTMLElement): string {
   return "none";
 }
 
+function isOnProfilePage(): boolean {
+  // Profile pages have /{handle} as the path with no /status/ or /home
+  const path = window.location.pathname;
+  return !path.includes("/status/") && !path.includes("/home") && !path.includes("/search") && !path.includes("/explore") && !path.includes("/notifications") && /^\/[^/]+\/?$/.test(path);
+}
+
+function isCellInThread(container: Element): boolean {
+  // Twitter removes the bottom border on cells that are part of a reply chain
+  const style = getComputedStyle(container);
+  return style.borderBottomWidth === "0px" || style.borderBottomStyle === "none";
+}
+
+function hasMiladyAbove(tweet: HTMLElement): boolean {
+  const container = tweet.closest(CELL_INNER_DIV) ?? tweet.parentElement;
+  if (!container) return false;
+  const prev = container.previousElementSibling;
+  const prevTweet = prev?.querySelector<HTMLElement>(TWEET);
+  return prevTweet?.dataset.miladymaxxerState === "match";
+}
+
+function hasMiladyBelow(tweet: HTMLElement): boolean {
+  const container = tweet.closest(CELL_INNER_DIV) ?? tweet.parentElement;
+  if (!container) return false;
+  const next = container.nextElementSibling;
+  const nextTweet = next?.querySelector<HTMLElement>(TWEET);
+  return nextTweet?.dataset.miladymaxxerState === "match";
+}
+
 function applyDebugState(tweet: HTMLElement): void {
   if (tweet.dataset.miladymaxxerState === "match") {
     tweet.dataset.miladymaxxerEffect = "debug-match";
@@ -100,8 +129,13 @@ export function clearVisualState(tweet: HTMLElement): void {
   delete tweet.dataset.miladymaxxerEffect;
   delete tweet.dataset.miladymaxxerDiamond;
   delete tweet.dataset.miladymaxxerNoLikes;
+  delete tweet.dataset.miladymaxxerUncaught;
+  delete tweet.dataset.miladymaxxerMint;
   delete tweet.dataset.miladymaxxerLiked;
   delete tweet.dataset.miladymaxxerFade;
+  delete tweet.dataset.miladymaxxerAdjacentAbove;
+  delete tweet.dataset.miladymaxxerAdjacentBelow;
+  delete tweet.dataset.miladymaxxerRetweeted;
 }
 
 export function clearPlaceholder(tweet: HTMLElement): void {
@@ -145,16 +179,20 @@ function getLikeCount(tweet: HTMLElement): number {
 
 export function hasLowLikes(tweet: HTMLElement): boolean {
   const count = getLikeCount(tweet);
-  return count >= 0 && count < 10;
+  return count >= 0 && count < 75;
 }
 
 export function hasHighLikes(tweet: HTMLElement): boolean {
-  return getLikeCount(tweet) >= 100;
+  return getLikeCount(tweet) >= 250;
 }
 
 export function hasUserLiked(tweet: HTMLElement): boolean {
   // If unlike button exists, user has liked this post
   return !!tweet.querySelector<HTMLElement>(UNLIKE_BUTTON);
+}
+
+export function hasUserRetweeted(tweet: HTMLElement): boolean {
+  return !!tweet.querySelector('[data-testid="unretweet"]');
 }
 
 export function doesUserFollow(tweet: HTMLElement): boolean {
@@ -320,17 +358,13 @@ function injectInlineElement(tweet: HTMLElement, element: HTMLElement): void {
 
 function updateLevelBadge(ctx: EffectsContext, tweet: HTMLElement): void {
   const handle = tweet.dataset.miladymaxxerHandle;
-  if (!handle || !ctx.settings.showLevelBadge || !ctx.isAccountCaught(handle)) {
+  if (!handle || !ctx.settings.showLevelBadge) {
     removeLevelBadge(tweet);
     return;
   }
 
   const postsLiked = ctx.getAccountPostsLiked(handle);
   const progress = getLevelProgress(postsLiked);
-  if (progress.level < 1) {
-    removeLevelBadge(tweet);
-    return;
-  }
 
   let badge = levelBadges.get(tweet);
   if (!badge) {
@@ -411,7 +445,27 @@ export function applyMode(ctx: EffectsContext, tweet: HTMLElement, normalizedUrl
       clearPlaceholder(tweet);
       tweet.style.display = "";
       if (isMatch) {
-        tweet.dataset.miladymaxxerEffect = "milady";
+        // Card theming off — skip visual effects but keep XP/catch
+        if (ctx.settings.cardTheme === "off") {
+          delete tweet.dataset.miladymaxxerEffect;
+        } else {
+          tweet.dataset.miladymaxxerEffect = "milady";
+        }
+        // Tighten margin between adjacent milady cards in threads
+        const inStatusView = /\/status\//.test(window.location.href);
+        const onProfile = isOnProfilePage();
+        const cellDiv = tweet.closest(CELL_INNER_DIV) ?? tweet.parentElement;
+        const canTighten = inStatusView || (!onProfile && cellDiv && isCellInThread(cellDiv));
+        if (canTighten && hasMiladyAbove(tweet)) {
+          tweet.dataset.miladymaxxerAdjacentAbove = "true";
+        } else {
+          delete tweet.dataset.miladymaxxerAdjacentAbove;
+        }
+        if (canTighten && hasMiladyBelow(tweet)) {
+          tweet.dataset.miladymaxxerAdjacentBelow = "true";
+        } else {
+          delete tweet.dataset.miladymaxxerAdjacentBelow;
+        }
         // Set edge fade based on adjacent tweets
         const fade = getEdgeFade(tweet);
         if (fade !== "none") {
@@ -419,38 +473,62 @@ export function applyMode(ctx: EffectsContext, tweet: HTMLElement, normalizedUrl
         } else {
           delete tweet.dataset.miladymaxxerFade;
         }
-        // Check for 100+ likes - diamond tier
-        if (hasHighLikes(tweet)) {
+        // Card tier based on cardTheme setting
+        const handle_ = tweet.dataset.miladymaxxerHandle;
+        const isCaught = handle_ ? ctx.isAccountCaught(handle_) : false;
+        const postsLiked_ = handle_ ? ctx.getAccountPostsLiked(handle_) : 0;
+        const theme = ctx.settings.cardTheme ?? "full";
+        if (theme === "off" || theme === "silver-only") {
+          // Force all milady cards to silver
+          tweet.dataset.miladymaxxerUncaught = "true";
+          delete tweet.dataset.miladymaxxerMint;
+        } else if (!isCaught || postsLiked_ === 0) {
+          tweet.dataset.miladymaxxerUncaught = "true";
+          delete tweet.dataset.miladymaxxerMint;
+        } else if (hasLowLikes(tweet) || theme === "no-premium") {
+          // no-premium: treat everything as mint (no gold/diamond)
+          tweet.dataset.miladymaxxerMint = "true";
+          delete tweet.dataset.miladymaxxerUncaught;
+        } else {
+          delete tweet.dataset.miladymaxxerUncaught;
+          delete tweet.dataset.miladymaxxerMint;
+        }
+        // Diamond tier — only in full theme
+        if (theme === "full" && hasHighLikes(tweet)) {
           tweet.dataset.miladymaxxerDiamond = "true";
         } else {
           delete tweet.dataset.miladymaxxerDiamond;
         }
-        // Check for <10 likes - tint silver to encourage engagement
-        if (hasLowLikes(tweet)) {
-          tweet.dataset.miladymaxxerNoLikes = "true";
-        } else {
-          delete tweet.dataset.miladymaxxerNoLikes;
-        }
-        // Check if user has liked - slightly more gold, trigger catch/level-up
+        // Check if user has liked
         if (hasUserLiked(tweet)) {
           tweet.dataset.miladymaxxerLiked = "true";
           if (!countedLikes.has(tweet)) {
             countedLikes.add(tweet);
             miladyLikesThisSession += 1;
             updateBadge(miladyLikesThisSession);
-            const handle = tweet.dataset.miladymaxxerHandle;
-            const xpKey = handle ? xpKeyForTweet(handle, tweet) : null;
-            if (handle && xpKey && !isTweetTooOldForXP(tweet) && !xpCreditedKeys.has(xpKey)) {
-              xpCreditedKeys.add(xpKey);
-              if (!ctx.isAccountCaught(handle)) {
-                ctx.onCatch(handle);
-                triggerCatchAnimation(tweet);
-              } else {
-                ctx.onLevelUp(handle, 0);
+            // Only credit XP if we previously saw this tweet as unliked
+            // (meaning the user clicked like during this session)
+            if (!seenTweets.has(tweet)) {
+              // First time seeing this element and it's already liked — pre-existing like, skip XP
+              seenTweets.add(tweet);
+            } else {
+              // We saw it before (as unliked), now it's liked — real like action
+              const handle = tweet.dataset.miladymaxxerHandle;
+              const xpKey = handle ? xpKeyForTweet(handle, tweet) : null;
+              if (handle && xpKey && !isTweetTooOldForXP(tweet) && !xpCreditedKeys.has(xpKey)) {
+                xpCreditedKeys.add(xpKey);
+                if (!ctx.isAccountCaught(handle)) {
+                  ctx.onCatch(handle);
+                  triggerCatchAnimation(tweet);
+                } else {
+                  ctx.onLevelUp(handle, 0);
+                }
               }
             }
           }
         } else {
+          // Mark as seen (unliked state) so future like click is credited
+          seenTweets.add(tweet);
           delete tweet.dataset.miladymaxxerLiked;
           if (countedLikes.has(tweet)) {
             countedLikes.delete(tweet);
@@ -463,6 +541,12 @@ export function applyMode(ctx: EffectsContext, tweet: HTMLElement, normalizedUrl
               ctx.onUnlike(handle);
             }
           }
+        }
+        // Retweet boost — thicker outline
+        if (hasUserRetweeted(tweet)) {
+          tweet.dataset.miladymaxxerRetweeted = "true";
+        } else {
+          delete tweet.dataset.miladymaxxerRetweeted;
         }
         updateLevelBadge(ctx, tweet);
         updateMiladyListButton(ctx, tweet);
