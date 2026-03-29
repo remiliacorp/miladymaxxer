@@ -651,12 +651,10 @@ function findAuthor(tweet: HTMLElement): { handle: string; displayName: string |
 }
 
 function injectProfileLevelBadge(handle: string): void {
-  if (!matchedAccounts || !settings.showLevelBadge) return;
-  const account = matchedAccounts[handle];
-  if (!account?.caught) return;
-
-  const progress = getLevelProgress(account.postsLiked);
-  if (progress.level < 1) return;
+  if (!settings.showLevelBadge) return;
+  const account = matchedAccounts?.[handle];
+  const postsLiked = account?.postsLiked ?? 0;
+  const progress = getLevelProgress(postsLiked);
 
   // Remove existing elements if present
   document.querySelector(".miladymaxxer-profile-level")?.remove();
@@ -667,13 +665,13 @@ function injectProfileLevelBadge(handle: string): void {
 
   // Build detailed tooltip
   const tooltipLines = [`Level ${progress.level} \u00b7 ${progress.current}/${progress.needed} to next level`];
-  if (account.postsMatched > 0) tooltipLines.push(`Posts seen: ${account.postsMatched}`);
-  if (account.postsLiked > 0) tooltipLines.push(`Posts liked: ${account.postsLiked}`);
-  if (account.caughtAt) {
+  if (account?.postsMatched && account.postsMatched > 0) tooltipLines.push(`Posts seen: ${account.postsMatched}`);
+  if (postsLiked > 0) tooltipLines.push(`Posts liked: ${postsLiked}`);
+  if (account?.caughtAt) {
     const caughtDate = new Date(account.caughtAt);
     tooltipLines.push(`Caught: ${caughtDate.toLocaleDateString()}`);
   }
-  if (account.lastDetectionScore != null) {
+  if (account?.lastDetectionScore != null) {
     tooltipLines.push(`Detection score: ${(account.lastDetectionScore * 100).toFixed(0)}%`);
   }
 
@@ -681,7 +679,7 @@ function injectProfileLevelBadge(handle: string): void {
   badge.className = "miladymaxxer-profile-level";
   badge.title = tooltipLines.join("\n");
   badge.innerHTML =
-    `<span class="miladymaxxer-profile-level-pill">Level: ${progress.level}</span>` +
+    `<span class="miladymaxxer-profile-level-pill">Milady Lvl: ${progress.level}</span>` +
     `<span class="miladymaxxer-profile-level-xp">XP: ${progress.current}/${progress.needed} ${ascii}</span>`;
 
   // Try to inject below the button row (Following / mail / more buttons)

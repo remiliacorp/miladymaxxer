@@ -116,6 +116,8 @@ export function clearVisualState(tweet: HTMLElement): void {
   delete tweet.dataset.miladymaxxerEffect;
   delete tweet.dataset.miladymaxxerDiamond;
   delete tweet.dataset.miladymaxxerNoLikes;
+  delete tweet.dataset.miladymaxxerUncaught;
+  delete tweet.dataset.miladymaxxerMint;
   delete tweet.dataset.miladymaxxerLiked;
   delete tweet.dataset.miladymaxxerFade;
   delete tweet.dataset.miladymaxxerAdjacentAbove;
@@ -163,11 +165,11 @@ function getLikeCount(tweet: HTMLElement): number {
 
 export function hasLowLikes(tweet: HTMLElement): boolean {
   const count = getLikeCount(tweet);
-  return count >= 0 && count < 10;
+  return count >= 0 && count < 50;
 }
 
 export function hasHighLikes(tweet: HTMLElement): boolean {
-  return getLikeCount(tweet) >= 100;
+  return getLikeCount(tweet) >= 150;
 }
 
 export function hasUserLiked(tweet: HTMLElement): boolean {
@@ -450,11 +452,19 @@ export function applyMode(ctx: EffectsContext, tweet: HTMLElement, normalizedUrl
         } else {
           delete tweet.dataset.miladymaxxerDiamond;
         }
-        // Check for <10 likes - tint silver to encourage engagement
-        if (hasLowLikes(tweet)) {
-          tweet.dataset.miladymaxxerNoLikes = "true";
+        // Card tier: silver = 0 XP, mint = caught with <10 post likes, gold = default
+        const handle_ = tweet.dataset.miladymaxxerHandle;
+        const isCaught = handle_ ? ctx.isAccountCaught(handle_) : false;
+        const postsLiked_ = handle_ ? ctx.getAccountPostsLiked(handle_) : 0;
+        if (!isCaught || postsLiked_ === 0) {
+          tweet.dataset.miladymaxxerUncaught = "true";
+          delete tweet.dataset.miladymaxxerMint;
+        } else if (hasLowLikes(tweet)) {
+          tweet.dataset.miladymaxxerMint = "true";
+          delete tweet.dataset.miladymaxxerUncaught;
         } else {
-          delete tweet.dataset.miladymaxxerNoLikes;
+          delete tweet.dataset.miladymaxxerUncaught;
+          delete tweet.dataset.miladymaxxerMint;
         }
         // Check if user has liked - slightly more gold, trigger catch/level-up
         if (hasUserLiked(tweet)) {

@@ -94,7 +94,16 @@ export function injectStyles(): void {
       color: #d4af37 !important;
     }
 
+    .miladymaxxer-add-btn[data-milady-list-state="remove"] {
+      opacity: 0 !important;
+    }
+
+    article:hover .miladymaxxer-add-btn[data-milady-list-state="remove"] {
+      opacity: 0.5 !important;
+    }
+
     .miladymaxxer-add-btn[data-milady-list-state="remove"]:hover {
+      opacity: 1 !important;
       color: rgb(244, 33, 46) !important;
     }
 
@@ -104,6 +113,8 @@ export function injectStyles(): void {
       white-space: nowrap !important;
       margin-left: 4px !important;
       display: inline !important;
+      position: relative !important;
+      top: -1px !important;
     }
 
     /* MILADY effect - gold floating card with depth */
@@ -167,7 +178,7 @@ export function injectStyles(): void {
     }
 
     /* Silver metallic for milady posts with 0 likes */
-    [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"] {
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-uncaught="true"] {
       background: linear-gradient(180deg, rgba(245, 245, 248, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
       outline-color: rgba(160, 160, 170, 0.4) !important;
       box-shadow:
@@ -176,7 +187,7 @@ export function injectStyles(): void {
         inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
     }
 
-    [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"]::before {
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-uncaught="true"]::before {
       background:
         linear-gradient(
           135deg,
@@ -189,7 +200,7 @@ export function injectStyles(): void {
         ) !important;
     }
 
-    [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"]::after {
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-uncaught="true"]::after {
       background: linear-gradient(
         90deg,
         rgba(255, 255, 255, 0) 0%,
@@ -200,13 +211,13 @@ export function injectStyles(): void {
       ) !important;
     }
 
-    [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"] [data-testid="Tweet-User-Avatar"] {
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-uncaught="true"] [data-testid="Tweet-User-Avatar"] {
       filter: drop-shadow(0 0 8px rgba(170, 175, 195, 0.5)) !important;
     }
 
     /* Light mode - explicit override for silver */
-    html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"],
-    body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"] {
+    html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-uncaught="true"],
+    body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-uncaught="true"] {
       background: linear-gradient(180deg, rgba(242, 242, 247, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
       outline-color: rgba(160, 160, 170, 0.4) !important;
       box-shadow:
@@ -215,8 +226,8 @@ export function injectStyles(): void {
         inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
     }
 
-    html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"]::before,
-    body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"]::before {
+    html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-uncaught="true"]::before,
+    body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-uncaught="true"]::before {
       background:
         linear-gradient(
           135deg,
@@ -230,8 +241,8 @@ export function injectStyles(): void {
     }
 
     /* Dark mode - rich silver card */
-    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"],
-    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"] {
+    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-uncaught="true"],
+    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-uncaught="true"] {
       background: linear-gradient(180deg, rgb(24, 26, 36) 0%, rgb(17, 19, 27) 100%) !important;
       outline-color: rgba(110, 115, 140, 0.3) !important;
       box-shadow:
@@ -239,8 +250,8 @@ export function injectStyles(): void {
         inset 0 1px 0 rgba(150, 155, 175, 0.1) !important;
     }
 
-    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"]::before,
-    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"]::before {
+    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-uncaught="true"]::before,
+    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-uncaught="true"]::before {
       background:
         linear-gradient(
           135deg,
@@ -252,15 +263,176 @@ export function injectStyles(): void {
         ) !important;
     }
 
-    /* Enhanced gold for posts user has liked - 20% more gold */
-    [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"] {
+    /* Mint green card — caught milady with <10 likes (base: light) */
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"] {
+      background: linear-gradient(180deg, rgba(248, 255, 246, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
+      outline-color: rgba(47, 77, 12, 0.15) !important;
+      box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.04),
+        0 4px 12px rgba(47, 77, 12, 0.05),
+        inset 0 1px 0 rgba(200, 240, 180, 0.2) !important;
+    }
+
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"]::before {
+      background:
+        linear-gradient(
+          135deg,
+          rgba(47, 77, 12, 0.03) 0%,
+          rgba(100, 160, 60, 0.04) 15%,
+          rgba(255, 255, 255, 0) 40%,
+          rgba(47, 77, 12, 0.01) 65%,
+          rgba(80, 140, 40, 0.03) 85%,
+          rgba(47, 77, 12, 0.02) 100%
+        ) !important;
+    }
+
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"] [data-testid="Tweet-User-Avatar"] {
+      filter: drop-shadow(0 0 8px rgba(47, 77, 12, 0.3)) !important;
+    }
+
+    /* Light mode mint (base: light forest green) */
+    html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"],
+    body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"] {
+      background: linear-gradient(180deg, rgba(244, 255, 240, 1) 0%, rgba(252, 255, 250, 1) 100%) !important;
+      outline-color: rgba(47, 77, 12, 0.18) !important;
+      box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.04),
+        0 4px 12px rgba(47, 77, 12, 0.05),
+        inset 0 1px 0 rgba(217, 240, 214, 0.4) !important;
+    }
+
+    html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"]::before,
+    body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"]::before {
+      background:
+        linear-gradient(
+          135deg,
+          rgba(47, 77, 12, 0.06) 0%,
+          rgba(100, 160, 60, 0.1) 15%,
+          rgba(255, 255, 255, 0) 40%,
+          rgba(47, 77, 12, 0.03) 65%,
+          rgba(80, 140, 40, 0.08) 85%,
+          rgba(47, 77, 12, 0.05) 100%
+        ) !important;
+    }
+
+    html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"]::after,
+    body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"]::after {
+      background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(47, 77, 12, 0.04) 25%,
+        rgba(232, 245, 224, 0.1) 50%,
+        rgba(47, 77, 12, 0.04) 75%,
+        rgba(255, 255, 255, 0) 100%
+      ) !important;
+    }
+
+    /* Dark mode mint — cool minty tint, not metallic green */
+    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"],
+    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"] {
+      background: linear-gradient(180deg, rgb(12, 22, 18) 0%, rgb(8, 16, 13) 100%) !important;
+      outline-color: rgba(100, 180, 140, 0.3) !important;
+      box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.3),
+        0 4px 14px rgba(80, 160, 120, 0.06),
+        inset 0 1px 0 rgba(140, 210, 170, 0.08) !important;
+    }
+
+    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"]::before,
+    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"]::before {
+      background:
+        linear-gradient(
+          135deg,
+          rgba(100, 180, 140, 0.05) 0%,
+          rgba(120, 200, 160, 0.03) 25%,
+          rgba(255, 255, 255, 0) 50%,
+          rgba(100, 180, 140, 0.02) 75%,
+          rgba(110, 190, 150, 0.04) 100%
+        ) !important;
+    }
+
+    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"]::after,
+    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"]::after {
+      background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(100, 180, 140, 0.04) 25%,
+        rgba(140, 210, 170, 0.06) 50%,
+        rgba(100, 180, 140, 0.04) 75%,
+        rgba(255, 255, 255, 0) 100%
+      ) !important;
+    }
+
+    /* Dark mode fallback mint */
+    @media (prefers-color-scheme: dark) {
+      [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"] {
+        background: linear-gradient(180deg, rgb(12, 22, 18) 0%, rgb(8, 16, 13) 100%) !important;
+        outline-color: rgba(100, 180, 140, 0.3) !important;
+        box-shadow:
+          0 2px 8px rgba(0, 0, 0, 0.3),
+          0 4px 14px rgba(80, 160, 120, 0.06),
+          inset 0 1px 0 rgba(140, 210, 170, 0.08) !important;
+      }
+    }
+
+    /* Mint avatar glow — green instead of gold */
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"] [data-testid="Tweet-User-Avatar"] {
+      filter: drop-shadow(0 0 6px rgba(47, 77, 12, 0.3)) !important;
+    }
+
+    /* Mint shimmer override — green tint instead of gold */
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"]::after {
+      background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(47, 77, 12, 0.06) 25%,
+        rgba(232, 245, 224, 0.12) 50%,
+        rgba(47, 77, 12, 0.06) 75%,
+        rgba(255, 255, 255, 0) 100%
+      ) !important;
+    }
+
+    /* Mint liked — mid-intensity forest green */
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"][data-miladymaxxer-liked="true"] {
+      background: linear-gradient(180deg, rgba(236, 248, 232, 1) 0%, rgba(246, 255, 242, 1) 100%) !important;
+      outline-color: rgba(47, 77, 12, 0.3) !important;
+      box-shadow:
+        0 2px 6px rgba(0, 0, 0, 0.06),
+        0 4px 16px rgba(47, 77, 12, 0.1),
+        inset 0 1px 0 rgba(200, 240, 180, 0.45) !important;
+    }
+
+    /* Light mode mint liked */
+    html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"][data-miladymaxxer-liked="true"],
+    body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"][data-miladymaxxer-liked="true"] {
+      background: linear-gradient(180deg, rgba(232, 245, 226, 1) 0%, rgba(244, 255, 238, 1) 100%) !important;
+      outline-color: rgba(47, 77, 12, 0.3) !important;
+      box-shadow:
+        0 2px 6px rgba(0, 0, 0, 0.06),
+        0 4px 16px rgba(47, 77, 12, 0.1),
+        inset 0 1px 0 rgba(200, 240, 180, 0.45) !important;
+    }
+
+    /* Dark mode mint liked */
+    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"][data-miladymaxxer-liked="true"],
+    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"][data-miladymaxxer-liked="true"] {
+      background: linear-gradient(180deg, rgb(13, 26, 20) 0%, rgb(9, 20, 15) 100%) !important;
+      outline-color: rgba(100, 190, 150, 0.4) !important;
+      box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.35),
+        0 4px 16px rgba(80, 170, 130, 0.1),
+        inset 0 1px 0 rgba(140, 210, 170, 0.12) !important;
+    }
+
+    /* Enhanced gold for posts user has liked - 20% more gold (only non-mint/non-uncaught) */
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"]:not([data-miladymaxxer-mint="true"]):not([data-miladymaxxer-uncaught="true"]) {
       box-shadow:
         0 2px 6px rgba(184, 134, 11, 0.12),
         0 4px 18px rgba(212, 175, 55, 0.2),
         inset 0 1px 0 rgba(255, 215, 0, 0.25) !important;
     }
 
-    [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"]::before {
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"]:not([data-miladymaxxer-mint="true"]):not([data-miladymaxxer-uncaught="true"])::before {
       background:
         linear-gradient(
           135deg,
@@ -273,9 +445,9 @@ export function injectStyles(): void {
         ) !important;
     }
 
-    /* Light mode liked - ~30% richer than base */
-    html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"],
-    body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"] {
+    /* Light mode liked - ~30% richer than base (gold only) */
+    html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"]:not([data-miladymaxxer-mint="true"]):not([data-miladymaxxer-uncaught="true"]),
+    body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"]:not([data-miladymaxxer-mint="true"]):not([data-miladymaxxer-uncaught="true"]) {
       background: linear-gradient(180deg, rgba(255, 243, 200, 1) 0%, rgba(255, 250, 230, 1) 100%) !important;
       box-shadow:
         0 2px 6px rgba(184, 134, 11, 0.12),
@@ -283,9 +455,9 @@ export function injectStyles(): void {
         inset 0 1px 0 rgba(255, 223, 100, 0.4) !important;
     }
 
-    /* Dark mode liked - subtly richer than base */
-    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"],
-    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"] {
+    /* Dark mode liked - subtly richer than base (gold only) */
+    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"]:not([data-miladymaxxer-mint="true"]):not([data-miladymaxxer-uncaught="true"]),
+    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"]:not([data-miladymaxxer-mint="true"]):not([data-miladymaxxer-uncaught="true"]) {
       background: linear-gradient(180deg, rgb(36, 30, 12) 0%, rgb(28, 23, 10) 100%) !important;
       box-shadow:
         0 2px 8px rgba(0, 0, 0, 0.3),
@@ -515,12 +687,13 @@ export function injectStyles(): void {
       align-items: center !important;
       justify-content: center !important;
       padding: 2px 10px !important;
+      margin-right: 6px !important;
       border-radius: 10px !important;
-      background: linear-gradient(135deg, #d4af37 0%, #f0c850 50%, #d4af37 100%) !important;
-      color: #1a1a1a !important;
+      background: linear-gradient(135deg, #2f4d0c 0%, #3d6510 50%, #2f4d0c 100%) !important;
+      color: #e8f5e0 !important;
       font-size: 12px !important;
       font-weight: 700 !important;
-      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+      text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2) !important;
       white-space: nowrap !important;
       line-height: 1.4 !important;
     }
@@ -601,6 +774,11 @@ export function injectStyles(): void {
 
     /* ===== END PROFILE PAGE STYLING ===== */
 
+
+    /* Sole milady card on timeline — extra bottom breathing room */
+    [data-miladymaxxer-effect="milady"]:not([data-miladymaxxer-adjacent-above="true"]):not([data-miladymaxxer-adjacent-below="true"]):not([data-miladymaxxer-fade]) {
+      margin-bottom: 8px !important;
+    }
 
     /* Adjacent milady cards on timeline — match reply view spacing */
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-adjacent-above="true"] {
@@ -838,7 +1016,7 @@ export function injectStyles(): void {
           inset 0 1px 0 rgba(255, 215, 0, 0.1) !important;
       }
 
-      [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"] {
+      [data-miladymaxxer-effect="milady"][data-miladymaxxer-uncaught="true"] {
         background: linear-gradient(180deg, rgb(24, 26, 36) 0%, rgb(17, 19, 27) 100%) !important;
         outline-color: rgba(110, 115, 140, 0.3) !important;
         box-shadow:
