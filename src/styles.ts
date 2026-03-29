@@ -103,10 +103,7 @@ export function injectStyles(): void {
       font: inherit !important;
       white-space: nowrap !important;
       margin-left: 4px !important;
-      position: absolute !important;
-      top: 50% !important;
-      transform: translateY(-50%) !important;
-      line-height: 1 !important;
+      display: inline !important;
     }
 
     /* MILADY effect - gold floating card with depth */
@@ -114,11 +111,11 @@ export function injectStyles(): void {
       position: relative !important;
       z-index: 1 !important;
       border-radius: 12px !important;
-      margin: 6px 0 !important;
+      margin: 6px 6px !important;
       border: none !important;
       outline: 1px solid rgba(212, 175, 55, 0.4) !important;
       outline-offset: -1px !important;
-      padding: 0 6px !important;
+      overflow: hidden !important;
       box-shadow:
         0 4px 8px rgba(0, 0, 0, 0.1),
         0 8px 24px rgba(212, 175, 55, 0.2),
@@ -626,7 +623,6 @@ export function injectStyles(): void {
     }
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="top"] {
-      outline-color: transparent !important;
       margin-top: 3px !important;
     }
 
@@ -644,7 +640,6 @@ export function injectStyles(): void {
     }
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="both"] {
-      outline-color: transparent !important;
       margin-top: 3px !important;
       margin-bottom: 3px !important;
     }
@@ -664,7 +659,6 @@ export function injectStyles(): void {
     }
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="bottom"] {
-      outline-color: transparent !important;
       margin-bottom: 3px !important;
     }
 
@@ -766,10 +760,12 @@ export function injectStyles(): void {
       z-index: 3 !important;
     }
 
-    /* Content sits above the overlays */
+    /* Content sits above the overlays; pull inward to compensate for side margins */
     [data-miladymaxxer-effect="milady"] > * {
       position: relative !important;
       z-index: 5 !important;
+      margin-left: -6px !important;
+      margin-right: -6px !important;
     }
 
     /* Gold metallic sheen overlay - behind content */
@@ -840,6 +836,14 @@ export function injectStyles(): void {
           0 2px 8px rgba(0, 0, 0, 0.3),
           0 4px 16px rgba(212, 175, 55, 0.08),
           inset 0 1px 0 rgba(255, 215, 0, 0.1) !important;
+      }
+
+      [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"] {
+        background: linear-gradient(180deg, rgb(24, 26, 36) 0%, rgb(17, 19, 27) 100%) !important;
+        outline-color: rgba(110, 115, 140, 0.3) !important;
+        box-shadow:
+          0 4px 14px rgba(110, 115, 140, 0.06),
+          inset 0 1px 0 rgba(150, 155, 175, 0.1) !important;
       }
     }
 

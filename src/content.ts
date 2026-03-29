@@ -56,6 +56,9 @@ import {
   observeIncomingMessages,
   playCatchSound,
   playLevelUpSound,
+  playLogoTune,
+  playLetterPip,
+  playLogoHoverSound,
 } from "./sounds";
 import { injectStyles } from "./styles";
 
@@ -485,6 +488,9 @@ async function processNotificationGroup(notification: HTMLElement): Promise<void
 // Logo replacement
 // ---------------------------------------------------------------------------
 
+let logoTypewriterTimer: number | null = null;
+let logoFadeTimer: number | null = null;
+
 function replaceXLogo(): void {
   try {
     const logoUrl = chrome.runtime.getURL("milady-logo.png");
@@ -493,6 +499,15 @@ function replaceXLogo(): void {
       Array.from(homeLink.children).forEach(child => {
         (child as HTMLElement).style.display = "none";
       });
+
+      // Wrapper for logo + typewriter text
+      const wrapper = document.createElement("div");
+      wrapper.style.cssText = `
+        position: relative;
+        display: inline-block;
+        transform: translate(10px, 10px);
+      `;
+
       const img = document.createElement("img");
       img.src = logoUrl;
       img.className = LOGO_REPLACEMENT_CLASS;
@@ -501,16 +516,93 @@ function replaceXLogo(): void {
         height: 30px;
         object-fit: contain;
         image-rendering: pixelated;
-        filter: drop-shadow(0 0 6px rgba(212, 175, 55, 0.4));
+        border: 1.5px solid rgba(212, 175, 55, 0.5);
         border-radius: 6px;
-        transform: translate(10px, 10px);
+        box-shadow: 0 0 8px rgba(212, 175, 55, 0.3), 0 0 16px rgba(212, 175, 55, 0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease, filter 0.3s ease;
+        cursor: pointer;
       `;
-      homeLink.appendChild(img);
+
+      // Typewriter text element
+      const typeText = document.createElement("span");
+      typeText.style.cssText = `
+        position: absolute;
+        left: 50%;
+        top: 100%;
+        transform: translateX(-50%);
+        margin-top: 2px;
+        color: rgb(113, 118, 123);
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        white-space: nowrap;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      `;
+
+      // Hover animation
+      img.addEventListener("mouseenter", () => {
+        img.style.transform = "translateY(-1px) scale(1.05)";
+        img.style.boxShadow = "0 0 12px rgba(212, 175, 55, 0.5), 0 0 24px rgba(212, 175, 55, 0.2)";
+        playLogoHoverSound();
+      }, { passive: true });
+
+      img.addEventListener("mouseleave", () => {
+        img.style.transform = "";
+        img.style.boxShadow = "0 0 8px rgba(212, 175, 55, 0.3), 0 0 16px rgba(212, 175, 55, 0.1)";
+      }, { passive: true });
+
+      // Click: tune + typewriter "milady"
+      img.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Cancel any in-progress typewriter and fade
+        if (logoTypewriterTimer !== null) {
+          window.clearInterval(logoTypewriterTimer);
+          logoTypewriterTimer = null;
+        }
+        if (logoFadeTimer !== null) {
+          window.clearTimeout(logoFadeTimer);
+          logoFadeTimer = null;
+        }
+
+        // Play the 3-note tune
+        playLogoTune();
+
+        // Typewriter effect
+        const word = "milady";
+        let i = 0;
+        typeText.textContent = "";
+        typeText.style.opacity = "1";
+
+        logoTypewriterTimer = window.setInterval(() => {
+          if (i < word.length) {
+            typeText.textContent += word[i];
+            playLetterPip(i);
+            i++;
+          } else {
+            window.clearInterval(logoTypewriterTimer!);
+            logoTypewriterTimer = null;
+            // Fade out after a pause
+            logoFadeTimer = window.setTimeout(() => {
+              typeText.style.opacity = "0";
+              logoFadeTimer = null;
+            }, 600);
+          }
+        }, 60);
+      }, { capture: true });
+
+      wrapper.appendChild(img);
+      wrapper.appendChild(typeText);
+      homeLink.appendChild(wrapper);
     }
   } catch {
     // Extension context invalidated
   }
 }
+
 
 // ---------------------------------------------------------------------------
 // DOM helpers
