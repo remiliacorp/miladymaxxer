@@ -438,15 +438,20 @@ export function applyMode(ctx: EffectsContext, tweet: HTMLElement, normalizedUrl
         } else {
           tweet.dataset.miladymaxxerEffect = "milady";
         }
-        // Tighten margin between adjacent milady cards
-        if (hasMiladyAbove(tweet)) {
-          tweet.dataset.miladymaxxerAdjacentAbove = "true";
+        // Tighten margin between adjacent milady cards (thread view only)
+        if (/\/status\//.test(window.location.href)) {
+          if (hasMiladyAbove(tweet)) {
+            tweet.dataset.miladymaxxerAdjacentAbove = "true";
+          } else {
+            delete tweet.dataset.miladymaxxerAdjacentAbove;
+          }
+          if (hasMiladyBelow(tweet)) {
+            tweet.dataset.miladymaxxerAdjacentBelow = "true";
+          } else {
+            delete tweet.dataset.miladymaxxerAdjacentBelow;
+          }
         } else {
           delete tweet.dataset.miladymaxxerAdjacentAbove;
-        }
-        if (hasMiladyBelow(tweet)) {
-          tweet.dataset.miladymaxxerAdjacentBelow = "true";
-        } else {
           delete tweet.dataset.miladymaxxerAdjacentBelow;
         }
         // Set edge fade based on adjacent tweets

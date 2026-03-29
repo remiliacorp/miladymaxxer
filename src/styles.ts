@@ -553,7 +553,6 @@ export function injectStyles(): void {
         rgba(200, 215, 255, 0.2) 70%,
         rgba(180, 200, 255, 0.35) 100%
       ) !important;
-      animation: milady-diamond-sparkle 3s ease-in-out infinite !important;
     }
 
     /* Diamond light streak (::after) */

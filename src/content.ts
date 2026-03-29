@@ -800,28 +800,7 @@ function findReplyToHandle(tweet: HTMLElement): string | null {
 }
 
 function checkReplyXP(_tweet: HTMLElement, _author: { handle: string } | null): void {
-  // Disabled — XP should only come from like actions, not from scanning existing replies
-  return;
-
-  const self = resolveSelfHandle();
-  if (!self || author.handle !== self) return;
-
-  const replyTo = findReplyToHandle(tweet);
-  if (!replyTo) return;
-
-  const target = matchedAccounts[replyTo];
-  if (!target?.caught) return;
-
-  creditedReplies.add(tweet);
-
-  const prevLevel = getLevel(target.postsLiked);
-  target.postsLiked += 1;
-  const newLevel = getLevel(target.postsLiked);
-  scheduleLocalStateWrite();
-
-  if (newLevel > prevLevel) {
-    playLevelUpSound();
-  }
+  // Disabled — XP should only come from like actions
 }
 
 function extractDisplayName(userName: HTMLElement): string | null {
