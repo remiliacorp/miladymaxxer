@@ -1109,12 +1109,12 @@ function updatePlayerLevelBadge(): void {
   const pct = progress.needed > 0 ? Math.round((progress.current / progress.needed) * 100) : 0;
 
   // Responsive: detect sidebar width and adjust text
-  const sidebar = logoImg.closest("header, nav")?.parentElement ?? logoImg.closest('[data-testid="primaryColumn"]')?.previousElementSibling;
+  const sidebar = logoImg.closest('[role="heading"]')?.parentElement?.parentElement ?? logoImg.closest("header, nav")?.parentElement ?? logoImg.closest('[data-testid="primaryColumn"]')?.previousElementSibling;
   const sidebarWidth = sidebar ? (sidebar as HTMLElement).offsetWidth : window.innerWidth;
   let text: string;
   if (sidebarWidth < 88) {
     // Ultra narrow (collapsed sidebar) — just level number
-    text = `${progress.level}`;
+    text = `Lv.${progress.level}`;
   } else if (sidebarWidth < 200) {
     // Narrow (DMs open) — compact
     text = `Lv.${progress.level} ${pct}%`;
