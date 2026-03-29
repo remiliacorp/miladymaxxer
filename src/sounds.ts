@@ -41,6 +41,8 @@ function ensureAudioContext(): void {
 // Bootstrap: listen for any user gesture to unlock audio
 document.addEventListener("click", ensureAudioContext, { once: false, passive: true, capture: true });
 document.addEventListener("keydown", ensureAudioContext, { once: false, passive: true, capture: true });
+document.addEventListener("mousedown", ensureAudioContext, { once: false, passive: true, capture: true });
+
 
 // AudioContext can only be created/resumed after a real user gesture (click/keydown).
 // Hover events don't qualify, so pass hoverOnly=true to silently skip.
@@ -70,8 +72,7 @@ function playTone(
 ): void {
   try {
     const ctx = getAudioContext();
-    if (!ctx) return; // Audio not yet unlocked
-
+    if (!ctx) return;
     const oscillator = ctx.createOscillator();
     const gainNode = ctx.createGain();
 
@@ -102,7 +103,9 @@ function playChord(frequencies: number[], duration: number, volume: number = 0.0
 
 // Sound presets
 function playHoverSound(isMilady: boolean): void {
-  if (!settings.soundEnabled || !getAudioContext(true)) return;
+  if (!settings.soundEnabled) return;
+  // Try to get existing context; hover can't create one but we check if it's ready
+  if (!audioContext || audioContext.state !== "running") return;
   if (isMilady) {
     // Sparkly high chime for milady
     playTone(1200, 0.12, "sine", 0.06);

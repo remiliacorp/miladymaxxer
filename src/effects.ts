@@ -356,6 +356,8 @@ function injectInlineElement(tweet: HTMLElement, element: HTMLElement): void {
   }
 }
 
+const badgePrevText = new WeakMap<HTMLElement, string>();
+
 function updateLevelBadge(ctx: EffectsContext, tweet: HTMLElement): void {
   const handle = tweet.dataset.miladymaxxerHandle;
   if (!handle || !ctx.settings.showLevelBadge) {
@@ -365,6 +367,7 @@ function updateLevelBadge(ctx: EffectsContext, tweet: HTMLElement): void {
 
   const postsLiked = ctx.getAccountPostsLiked(handle);
   const progress = getLevelProgress(postsLiked);
+  const newText = ` \u00b7 Lv.${progress.level} ${asciiProgressBar(progress.current, progress.needed)}`;
 
   let badge = levelBadges.get(tweet);
   if (!badge) {
@@ -373,7 +376,16 @@ function updateLevelBadge(ctx: EffectsContext, tweet: HTMLElement): void {
     levelBadges.set(tweet, badge);
   }
 
-  badge.textContent = ` \u00b7 Lv.${progress.level} ${asciiProgressBar(progress.current, progress.needed)}`;
+  // Flash when text changes (XP gained or level up)
+  const prevText = badgePrevText.get(tweet);
+  if (prevText && prevText !== newText) {
+    badge.classList.remove("miladymaxxer-level-flash");
+    void badge.offsetWidth; // force reflow to restart animation
+    badge.classList.add("miladymaxxer-level-flash");
+  }
+  badgePrevText.set(tweet, newText);
+
+  badge.textContent = newText;
 
   if (!badge.isConnected) {
     injectInlineElement(tweet, badge);

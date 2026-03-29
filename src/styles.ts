@@ -107,6 +107,17 @@ export function injectStyles(): void {
       color: rgb(244, 33, 46) !important;
     }
 
+    @keyframes milady-level-flash {
+      0% { color: rgb(113, 118, 123); }
+      15% { color: #2f4d0c; transform: scale(1.15); }
+      40% { color: #3d6510; }
+      100% { color: rgb(113, 118, 123); transform: scale(1); }
+    }
+
+    .miladymaxxer-level-flash {
+      animation: milady-level-flash 1.2s ease-out !important;
+    }
+
     .miladymaxxer-level-inline {
       color: rgb(113, 118, 123) !important;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
