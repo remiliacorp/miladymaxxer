@@ -33,6 +33,7 @@ import {
   TWEET,
   NOTIFICATION,
   USER_CELL,
+  DM_MESSAGE,
   TWEET_USER_AVATAR,
   TWEET_USER_AVATAR_LINK,
   USER_NAME,
@@ -194,10 +195,12 @@ async function processVisibleTweets(): Promise<void> {
   const tweets = Array.from(document.querySelectorAll<HTMLElement>(TWEET));
   const notifications = Array.from(document.querySelectorAll<HTMLElement>(NOTIFICATION));
   const userCells = Array.from(document.querySelectorAll<HTMLElement>(USER_CELL));
+  const directMessages = Array.from(document.querySelectorAll<HTMLElement>(DM_MESSAGE));
   await Promise.allSettled([
     ...tweets.map((tweet) => processTweet(tweet)),
     ...notifications.map((notification) => processNotificationGroup(notification)),
     ...userCells.map((cell) => processUserCell(cell)),
+    ...directMessages.map((message) => processDirectMessage(message)),
     processProfilePage(),
   ]);
 }
@@ -483,6 +486,155 @@ async function processUserCell(cell: HTMLElement): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Direct messages
+// ---------------------------------------------------------------------------
+
+async function processDirectMessage(message: HTMLElement): Promise<void> {
+  if (settings.mode === "off") {
+    // Clear stale DM highlights when the extension is turned off.
+    clearDirectMessageHighlight(message);
+    return;
+  }
+
+  const avatar = findDirectMessageAvatar(message);
+  if (!avatar) {
+    processed.delete(message);
+    clearDirectMessageHighlight(message);
+    return;
+  }
+
+  const avatarSrc = avatar.currentSrc || avatar.src;
+  if (!avatarSrc) {
+    processed.delete(message);
+    clearDirectMessageHighlight(message);
+    return;
+  }
+
+  const normalizedUrl = normalizeProfileImageUrl(avatarSrc);
+  // Reuse the avatar URL cache just like tweets so we avoid re-detecting unchanged messages.
+  const author = findDirectMessageAuthor(avatar);
+
+  if (processed.get(message) === normalizedUrl && message.dataset.miladymaxxerState) {
+    // Re-process if the sender was added to the manual list after this message was cached.
+    if (author && settings.miladyListHandles.includes(author.handle) && message.dataset.miladymaxxerState !== "match") {
+      processed.delete(message);
+    } else {
+      applyDirectMessageMode(message);
+      return;
+    }
+  }
+
+  processed.set(message, normalizedUrl);
+
+  const handle = author?.handle;
+  if (!handle) {
+    delete message.dataset.miladymaxxerHandle;
+  } else {
+    message.dataset.miladymaxxerHandle = handle;
+  }
+
+  const isWhitelisted = handle ? settings.whitelistHandles.includes(handle) : false;
+  if (isWhitelisted) {
+    recordDirectMessageAvatar(normalizedUrl, avatarSrc, author, true);
+    clearDirectMessageHighlight(message);
+    return;
+  }
+
+  const isOnMiladyList = handle ? settings.miladyListHandles.includes(handle) : false;
+  if (isOnMiladyList) {
+    // Manual list entries are treated as matches without avatar detection.
+    recordDirectMessageAvatar(normalizedUrl, avatarSrc, author, false);
+    message.dataset.miladymaxxer = "manual";
+    message.dataset.miladymaxxerState = "match";
+    delete message.dataset.miladymaxxerDebug;
+    applyDirectMessageMode(message);
+    return;
+  }
+
+  message.dataset.miladymaxxerState = "miss";
+  delete message.dataset.miladymaxxer;
+  delete message.dataset.miladymaxxerDebug;
+  applyDirectMessageMode(message);
+
+  try {
+    const result = await detectAvatar(avatar, normalizedUrl, {
+      onCacheHit: () => incrementStat("cacheHits"),
+      onAvatarChecked: () => incrementStat("avatarsChecked"),
+      onError: () => incrementStat("errors"),
+    });
+
+    if (result.debugLabel) {
+      message.dataset.miladymaxxerDebug = result.debugLabel;
+    } else {
+      delete message.dataset.miladymaxxerDebug;
+    }
+
+    recordDirectMessageAvatar(normalizedUrl, avatarSrc, author, false, result);
+
+    if (result.matched) {
+      message.dataset.miladymaxxer = result.source ?? "match";
+      message.dataset.miladymaxxerState = "match";
+      applyDirectMessageMode(message);
+      return;
+    }
+
+    delete message.dataset.miladymaxxer;
+    message.dataset.miladymaxxerState = "miss";
+    applyDirectMessageMode(message);
+  } catch (error) {
+    console.error("Milady DM processing failed", error);
+    delete message.dataset.miladymaxxer;
+    message.dataset.miladymaxxerState = "miss";
+    message.dataset.miladymaxxerDebug = "err";
+    applyDirectMessageMode(message);
+  }
+}
+
+function clearDirectMessageHighlight(message: HTMLElement): void {
+  // DMs only use a small subset of the tweet data attributes.
+  delete message.dataset.miladymaxxer;
+  delete message.dataset.miladymaxxerState;
+  delete message.dataset.miladymaxxerEffect;
+  delete message.dataset.miladymaxxerHandle;
+  delete message.dataset.miladymaxxerDebug;
+}
+
+function applyDirectMessageMode(message: HTMLElement): void {
+  delete message.dataset.miladymaxxerEffect;
+
+  const isMatch = message.dataset.miladymaxxerState === "match";
+  if (settings.mode === "debug") {
+    // Reuse the existing debug visuals instead of inventing a DM-specific variant.
+    message.dataset.miladymaxxerEffect = isMatch ? "debug-match" : "debug-miss";
+    return;
+  }
+
+  if (settings.mode === "milady" && isMatch) {
+    message.dataset.miladymaxxerEffect = "milady-dm";
+  }
+}
+
+function recordDirectMessageAvatar(
+  normalizedUrl: string,
+  originalUrl: string,
+  author: { handle: string; displayName: string | null } | null,
+  whitelisted: boolean,
+  result?: DetectionResult,
+): void {
+  // DMs share the same avatar catalog; tweet/notification example URLs simply do not apply here.
+  recordCollectedAvatar({
+    normalizedUrl,
+    originalUrl,
+    author,
+    whitelisted,
+    exampleTweetUrl: null,
+    exampleNotificationUrl: null,
+    sourceSurface: "dm-message",
+    result,
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Notification groups
 // ---------------------------------------------------------------------------
 
@@ -661,6 +813,19 @@ function findAvatar(tweet: HTMLElement): HTMLImageElement | null {
   return tweet.querySelector<HTMLImageElement>(PROFILE_IMAGE);
 }
 
+function findDirectMessageAvatar(message: HTMLElement): HTMLImageElement | null {
+  // In DMs, the sender avatar is usually the profile-linked image in the row.
+  const linkedImages = Array.from(message.querySelectorAll<HTMLImageElement>('a[href^="/"] img[src*="profile_images"]'));
+  for (const image of linkedImages) {
+    const href = image.closest<HTMLAnchorElement>('a[href^="/"]')?.getAttribute("href");
+    if (normalizeProfileHandleFromHref(href)) {
+      return image;
+    }
+  }
+
+  return message.querySelector<HTMLImageElement>(PROFILE_IMAGE);
+}
+
 function getImageSize(img: HTMLImageElement): number {
   // Try natural dimensions first
   const natural = (img.naturalWidth || 0) * (img.naturalHeight || 0);
@@ -682,6 +847,39 @@ function findAuthor(tweet: HTMLElement): { handle: string; displayName: string |
     handle,
     displayName: userName ? extractDisplayName(userName) : null,
   };
+}
+
+function findDirectMessageAuthor(
+  avatar: HTMLImageElement,
+): { handle: string; displayName: string | null } | null {
+  const avatarLink = avatar.closest<HTMLAnchorElement>('a[href^="/"]');
+  const handle = normalizeProfileHandleFromHref(avatarLink?.getAttribute("href"));
+  if (!handle) return null;
+
+  return {
+    handle,
+    // DM rows rarely expose a clean display-name node, so use link metadata when present.
+    displayName: avatarLink?.getAttribute("aria-label")?.trim() || avatarLink?.getAttribute("title")?.trim() || null,
+  };
+}
+
+function normalizeProfileHandleFromHref(value: string | null | undefined): string | null {
+  const absoluteUrl = toAbsoluteUrl(value);
+  if (!absoluteUrl) return null;
+
+  try {
+    const url = new URL(absoluteUrl);
+    const segments = url.pathname.split("/").filter(Boolean);
+    // Ignore internal DM routes like /messages/... and only accept profile-style paths.
+    if (segments.length !== 1) {
+      return null;
+    }
+
+    const handle = normalizeHandle(segments[0]);
+    return /^[a-z0-9_]{1,15}$/i.test(handle) ? handle : null;
+  } catch {
+    return null;
+  }
 }
 
 function injectProfileLevelBadge(handle: string): void {
