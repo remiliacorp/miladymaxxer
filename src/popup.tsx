@@ -572,11 +572,91 @@ const styles = `
   }
 
   .account-row-uncaught {
-    opacity: 0.55;
+    background: rgba(120, 120, 120, 0.08);
+    border-color: rgba(120, 120, 120, 0.15);
+    padding: 5px 8px;
+    gap: 6px;
+  }
+
+  .account-row-uncaught .account-avatar,
+  .account-row-uncaught .account-avatar-placeholder {
+    width: 22px;
+    height: 22px;
+    border-width: 1px;
+    border-color: rgba(120, 120, 120, 0.3);
+  }
+
+  .account-row-uncaught .account-handle {
+    font-size: 11px;
+    font-weight: 500;
+    color: #888;
+  }
+
+  .account-row-uncaught .account-note {
+    font-size: 10px;
+    color: #aaa;
+  }
+
+  .account-row-uncaught .account-link {
+    font-size: 9px;
+    padding: 2px 6px;
   }
 
   .account-row-uncaught:hover {
-    opacity: 0.8;
+    border-color: rgba(120, 120, 120, 0.3);
+  }
+
+  .level-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1px 7px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #2f4d0c 0%, #3d6510 100%);
+    color: #e8f5e0;
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .tooltip-trigger {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(47, 77, 12, 0.1);
+    border: 1px solid rgba(47, 77, 12, 0.2);
+    color: var(--text-faint);
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: help;
+  }
+
+  .tooltip-trigger:hover + .tooltip-content {
+    display: block;
+  }
+
+  .tooltip-content {
+    display: none;
+    position: absolute;
+    top: 22px;
+    right: 0;
+    width: 220px;
+    padding: 8px 10px;
+    background: rgba(15, 20, 10, 0.95);
+    color: #d9f0d6;
+    font-size: 10px;
+    line-height: 1.5;
+    border-radius: 6px;
+    z-index: 10;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   }
 
   .collection-stats {
@@ -929,7 +1009,17 @@ function App() {
         </Show>
 
         <Show when={tab() === "accounts"}>
-          <section class="panel">
+          <section class="panel" style="position: relative">
+            <span class="tooltip-trigger">?</span>
+            <div class="tooltip-content">
+              Like milady posts to earn XP and level up!<br/>
+              Level = floor(√ posts liked)<br/><br/>
+              <b>Card tiers:</b><br/>
+              Silver — uncaught (Lv.0)<br/>
+              Mint — caught, &lt;50 likes<br/>
+              Gold — 50+ likes<br/>
+              Diamond — 150+ likes
+            </div>
             <p class="collection-stats">
               {formatNumber(caughtCount())} caught / {formatNumber(seenCount())} seen · {catchRateLabel()}
             </p>
@@ -967,7 +1057,6 @@ function App() {
                   <div class="account-list">
                     <For each={whitelistedAccounts()}>
                       {(account) => {
-                        const avatarUrl = getAvatarUrl(account.handle);
                         return (
                           <div
                             class="account-row"
@@ -975,16 +1064,20 @@ function App() {
                             title={`@${account.handle} is exempt`}
                           >
                             <Show
-                              when={avatarUrl}
+                              when={getAvatarUrl(account.handle)}
                               fallback={<div class="account-avatar-placeholder">✦</div>}
                             >
-                              <img
-                                src={avatarUrl!}
-                                alt=""
-                                class="account-avatar"
-                                onClick={(e) => openProfile(account.handle, e)}
-                                style="cursor: pointer"
-                              />
+                              {(url) => (
+                                <img
+                                  src={url()}
+                                  alt=""
+                                  class="account-avatar"
+                                  loading="eager"
+                                  referrerPolicy="no-referrer"
+                                  onClick={(e) => openProfile(account.handle, e)}
+                                  style="cursor: pointer"
+                                />
+                              )}
                             </Show>
                             <div class="account-info" onClick={() => void toggleWhitelist(account.handle)} style="cursor: pointer">
                               <p class="account-handle">@{account.handle}</p>
@@ -1033,27 +1126,28 @@ function App() {
                             title={tooltipText()}
                           >
                             <Show
-                              when={avatarUrl}
+                              when={getAvatarUrl(account.handle)}
                               fallback={<div class="account-avatar-placeholder">✦</div>}
                             >
-                              <img
-                                src={avatarUrl!}
-                                alt=""
-                                class="account-avatar"
-                                onClick={(e) => openProfile(account.handle, e)}
-                                style="cursor: pointer"
-                              />
+                              {(url) => (
+                                <img
+                                  src={url()}
+                                  alt=""
+                                  class="account-avatar"
+                                  loading="eager"
+                                  referrerPolicy="no-referrer"
+                                  onClick={(e) => openProfile(account.handle, e)}
+                                  style="cursor: pointer"
+                                />
+                              )}
                             </Show>
                             <div class="account-info" onClick={(e) => openProfile(account.handle, e)} style="cursor: pointer">
                               <div class="account-handle-row">
-                                <span class="account-handle">@{account.handle}</span>
-                                <Show when={account.displayName}>
-                                  <span class="account-displayname"> · {account.displayName}</span>
-                                </Show>
-                                <span class="account-level">Lv.{progress().level}</span>
+                                <span class="account-handle" style="font-weight: 700; font-size: 13px">{account.displayName || account.handle}</span>
+                                <span class="level-pill">Lv.{progress().level}</span>
                               </div>
-                              <p class="account-note">
-                                {formatNumber(account.postsLiked)} likes · {progress().current}/{progress().needed} to next level
+                              <p class="account-note" style="margin: 0">
+                                @{account.handle} · {formatNumber(account.postsLiked)} likes
                               </p>
                               <div class="xp-bar-container">
                                 <div
@@ -1076,23 +1170,26 @@ function App() {
                   <div class="account-list">
                     <For each={uncaughtAccounts()}>
                       {(account) => {
-                        const avatarUrl = getAvatarUrl(account.handle);
                         return (
                           <div
                             class="account-row account-row-uncaught"
                             title={`Seen ${formatNumber(account.postsMatched)} times${account.lastDetectionScore != null ? ` \u00b7 Score ${(account.lastDetectionScore * 100).toFixed(0)}%` : ""}`}
                           >
                             <Show
-                              when={avatarUrl}
+                              when={getAvatarUrl(account.handle)}
                               fallback={<div class="account-avatar-placeholder">✦</div>}
                             >
-                              <img
-                                src={avatarUrl!}
-                                alt=""
-                                class="account-avatar"
-                                onClick={(e) => openProfile(account.handle, e)}
-                                style="cursor: pointer"
-                              />
+                              {(url) => (
+                                <img
+                                  src={url()}
+                                  alt=""
+                                  class="account-avatar"
+                                  loading="eager"
+                                  referrerPolicy="no-referrer"
+                                  onClick={(e) => openProfile(account.handle, e)}
+                                  style="cursor: pointer"
+                                />
+                              )}
                             </Show>
                             <div class="account-info" onClick={(e) => openProfile(account.handle, e)} style="cursor: pointer">
                               <p class="account-handle">@{account.handle}</p>

@@ -4,7 +4,7 @@
   "version": "0.3.0",
   "description": "Elevate milady. Diminish the rest. On-device avatar detection for X.",
   "permissions": ["storage", "unlimitedStorage"],
-  "host_permissions": ["https://x.com/*", "https://twitter.com/*"],
+  "host_permissions": ["https://x.com/*", "https://twitter.com/*", "https://pbs.twimg.com/*"],
   "icons": {
     "16": "milady-logo.png",
     "48": "milady-logo.png",
